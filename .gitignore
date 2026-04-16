@@ -1,0 +1,6 @@
+.venv
+volumes
+.env
+__pycache__
+.pytest_cache
+samples
