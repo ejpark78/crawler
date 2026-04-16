@@ -5,6 +5,34 @@ from typing import List
 from app.scrapers.geeknews import GeekNewsScraper
 from app.models import NewsItem
 
+def test_get_backfill_url_combinations():
+    """
+    다양한 입력 조합에 대해 올바른 백필 URL이 생성되는지 테스트합니다.
+    """
+    scraper = GeekNewsScraper()
+    base = "https://news.hada.io"
+
+    # 1. 기본 페이지 (1~5)
+    assert scraper._get_backfill_url(base, "1") == f"{base}/?page=1"
+    assert scraper._get_backfill_url(base, "5") == f"{base}/?page=5"
+
+    # 2. 과거 페이지 (6+)
+    assert scraper._get_backfill_url(base, "6") == f"{base}/past?page=6"
+    assert scraper._get_backfill_url(base, "100") == f"{base}/past?page=100"
+
+    # 3. 특정 날짜
+    assert scraper._get_backfill_url(base, "2026-04-15") == f"{base}/past?day=2026-04-15"
+
+    # 4. 특정 날짜 + 페이지
+    assert scraper._get_backfill_url(base, "2026-04-15", page=2) == f"{base}/past?day=2026-04-15&page=2"
+
+    # 5. 최신 댓글 리스트
+    assert scraper._get_backfill_url(base, "comments", page=22) == f"{base}/comments?page=22"
+
+    # 6. 댓글 리스트 호출 시 페이지 누락 시 에러 확인
+    with pytest.raises(ValueError, match="Page number is required"):
+        scraper._get_backfill_url(base, "comments")
+
 class SampleCollector:
     """
     GeekNews의 랜덤한 페이지를 수집하고 검증하는 헬퍼 클래스

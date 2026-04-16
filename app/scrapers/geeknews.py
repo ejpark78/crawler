@@ -173,11 +173,39 @@ class GeekNewsScraper(BaseScraper):
 
         return comments
 
-    def _get_backfill_url(self, base_url: str, date_str: str) -> str:
+    def _get_backfill_url(self, base_url: str, date_str: str, page: int = None) -> str:
         """
         GeekNews의 과거 데이터 URL 구조를 처리합니다.
-        GeekNews는 /?page=N 형식을 사용하므로, date_str이 숫자면 page로 처리합니다.
+        1. date_str이 숫자(페이지 번호)인 경우:
+           - 1~5페이지: /?page=N
+           - 6페이지 이상: /past?page=N
+        2. date_str이 날짜 형식(YYYY-MM-DD)인 경우:
+           - /past?day=YYYY-MM-DD (&page=N 추가 가능)
+        3. date_str이 'comments'인 경우:
+           - /comments?page=N (page 인자 필수)
         """
+        base = base_url.rstrip('/')
+
+        # 댓글 리스트 수집 모드 확인
+        if date_str == 'comments':
+            if page is None:
+                raise ValueError("Page number is required when date_str is 'comments'")
+            return f"{base}/comments?page={page}"
+
+        # 날짜 형식인지 확인 (예: 2026-03-09)
+        import re
+        if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+            url = f"{base}/past?day={date_str}"
+            if page:
+                url += f"&page={page}"
+            return url
+
+        # 숫자(페이지 번호)인 경우
         if date_str.isdigit():
-            return f"{base_url if base_url.endswith('/') else base_url + '/'}?page={date_str}"
+            page_num = int(date_str)
+            if page_num <= 5:
+                return f"{base}/?page={page_num}"
+            else:
+                return f"{base}/past?page={page_num}"
+
         return base_url
