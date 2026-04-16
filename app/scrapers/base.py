@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
+import time
+import random
 from app.models import NewsItem
 from scrapling import StealthyFetcher
 
@@ -11,9 +13,16 @@ class BaseScraper(ABC):
         # Scrapling의 Stealth 모드 사용
         self.crawler = StealthyFetcher()
 
-    @abstractmethod
     def fetch(self, url: str) -> str:
-        """웹 페이지 HTML을 가져오는 인터페이스"""
+        """웹 페이지 HTML을 가져오는 인터페이스 (요청 전 랜덤 딜레이 추가)"""
+        # 봇 차단 방지를 위해 1~3초 사이의 랜덤 딜레이 적용
+        delay = random.uniform(1, 3)
+        time.sleep(delay)
+        return self._do_fetch(url)
+
+    @abstractmethod
+    def _do_fetch(self, url: str) -> str:
+        """실제 HTML을 가져오는 내부 구현 메서드"""
         pass
 
     @abstractmethod
@@ -21,48 +30,26 @@ class BaseScraper(ABC):
         """HTML을 파싱하여 NewsItem 리스트로 변환하는 인터페이스"""
         pass
 
-    def save(self, items: List[NewsItem], db_connection):
-        """PostgreSQL에 JSONB 형태로 저장 (Upsert 방식)"""
-        import json
-        from psycopg2.extras import execute_values
+    def save(self, items: List[NewsItem], db_connection, html: Optional[str] = None):
+        """MongoDB에 데이터 저장 (Upsert 방식)"""
+        from pymongo import MongoClient
 
-        # 테이블 생성 (최초 1회)
-        with db_connection.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS news_items (
-                    url TEXT PRIMARY KEY,
-                    source TEXT,
-                    html TEXT,
-                    contents JSONB,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-            db_connection.commit()
+        # db_connection이 MongoClient 인스턴스라고 가정
+        db = db_connection["crawler_db"]
+        collection = db["news_items"]
 
-        # 데이터 준비
-        data = []
         for item in items:
-            # item.model_dump()를 JSON 문자열로 변환하여 JSONB 컬럼에 저장
-            contents = json.dumps(item.model_dump(), ensure_ascii=False)
-            # 상세 페이지 HTML은 items 수집 단계에서 item 객체에 추가되어 있다고 가정하거나,
-            # 여기서는 parse 단계에서 가져온 HTML 원본이 필요함.
-            # BaseScraper.run에서 html을 가져오므로 이를 save에 전달하는 구조로 변경이 필요할 수 있음.
-            # 우선 요청하신 item id(url), html, contents 구조로 구현.
-            data.append((item.url, item.source, None, contents))
+            # mode='json'을 사용하여 datetime 등 JSON 비호환 타입을 문자열로 자동 변환
+            doc = item.model_dump(mode='json')
+            doc["_id"] = item.url  # URL을 PK로 사용
+            doc["html"] = html     # 원본 HTML 저장
 
-        # Upsert 실행
-        upsert_query = """
-            INSERT INTO news_items (url, source, html, contents)
-            VALUES %s
-            ON CONFLICT (url) DO UPDATE SET
-                source = EXCLUDED.source,
-                html = EXCLUDED.html,
-                contents = EXCLUDED.contents,
-                created_at = CURRENT_TIMESTAMP;
-        """
-        with db_connection.cursor() as cursor:
-            execute_values(cursor, upsert_query, data)
-            db_connection.commit()
+            collection.update_one(
+                {"_id": item.url},
+                {"$set": doc},
+                upsert=True
+            )
+        print(f"Successfully saved {len(items)} items to MongoDB.")
 
     def save_to_json(self, items: List[NewsItem], file_path: str):
         """수집된 데이터를 JSON 파일로 저장 (comments 필드는 제외하여 저장)"""

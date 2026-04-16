@@ -18,7 +18,7 @@ class GeekNewsScraper(BaseScraper):
             "Upgrade-Insecure-Requests": "1",
         }
 
-    def fetch(self, url: str) -> str:
+    def _do_fetch(self, url: str) -> str:
         """curl-cffi를 사용하여 curl과 동일한 핑거프린트로 HTML 가져오기"""
         from curl_cffi import requests
         import os

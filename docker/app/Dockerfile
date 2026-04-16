@@ -33,8 +33,12 @@ RUN apt-get update && apt-get install -y \
     chromium \
     && rm -rf /var/lib/apt/lists/*
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 # Copy virtualenv from builder
 COPY --from=builder /app/.venv /app/.venv
+
 # Set environment paths to use the virtualenv
 ENV PATH="/app/.venv/bin:$PATH"
 

@@ -39,3 +39,30 @@ CLAUDE.md에 위 내용을 반영한 후, Claude Code에게 다음과 같이 명
 * 리팩토링 안심: 추상 클래스 구조를 변경하더라도 기존 테스트가 보호해주므로 과감한 코드 개선이 가능합니다.
 
 이제 테스트 코드부터 시작하는 완벽한 파이프라인을 구축해 보세요! 다음 단계로 CI/CD(GitHub Actions) 연동까지 고려해 드릴까요?
+
+
+
+```shell
+docker run --rm \
+   -v /home/ejpark/workspace/crawler:/app \
+   --network crawler_default \
+   crawler-app:latest \
+   python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-16 --page 1
+
+
+
+
+docker compose exec airflow airflow dags backfill \
+   -s 2026-04-01 \
+   -e 2026-04-17 \
+   news_collection_pipeline
+
+
+docker run --rm \
+   -v /home/ejpark/workspace/crawler:/app \
+   --network crawler_default \
+   crawler-app:latest \
+   python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-09 --page 1
+
+
+```
