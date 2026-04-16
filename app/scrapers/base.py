@@ -21,14 +21,48 @@ class BaseScraper(ABC):
         """HTML을 파싱하여 NewsItem 리스트로 변환하는 인터페이스"""
         pass
 
-    def save(self, items: List[NewsItem], db_collection):
-        """MongoDB에 Upsert 방식으로 저장 (공통 로직)"""
+    def save(self, items: List[NewsItem], db_connection):
+        """PostgreSQL에 JSONB 형태로 저장 (Upsert 방식)"""
+        import json
+        from psycopg2.extras import execute_values
+
+        # 테이블 생성 (최초 1회)
+        with db_connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS news_items (
+                    url TEXT PRIMARY KEY,
+                    source TEXT,
+                    html TEXT,
+                    contents JSONB,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            db_connection.commit()
+
+        # 데이터 준비
+        data = []
         for item in items:
-            db_collection.update_one(
-                {"url": item.url},
-                {"$set": item.model_dump()},
-                upsert=True
-            )
+            # item.model_dump()를 JSON 문자열로 변환하여 JSONB 컬럼에 저장
+            contents = json.dumps(item.model_dump(), ensure_ascii=False)
+            # 상세 페이지 HTML은 items 수집 단계에서 item 객체에 추가되어 있다고 가정하거나,
+            # 여기서는 parse 단계에서 가져온 HTML 원본이 필요함.
+            # BaseScraper.run에서 html을 가져오므로 이를 save에 전달하는 구조로 변경이 필요할 수 있음.
+            # 우선 요청하신 item id(url), html, contents 구조로 구현.
+            data.append((item.url, item.source, None, contents))
+
+        # Upsert 실행
+        upsert_query = """
+            INSERT INTO news_items (url, source, html, contents)
+            VALUES %s
+            ON CONFLICT (url) DO UPDATE SET
+                source = EXCLUDED.source,
+                html = EXCLUDED.html,
+                contents = EXCLUDED.contents,
+                created_at = CURRENT_TIMESTAMP;
+        """
+        with db_connection.cursor() as cursor:
+            execute_values(cursor, upsert_query, data)
+            db_connection.commit()
 
     def save_to_json(self, items: List[NewsItem], file_path: str):
         """수집된 데이터를 JSON 파일로 저장 (comments 필드는 제외하여 저장)"""
@@ -97,19 +131,19 @@ class BaseScraper(ABC):
         os.chmod(file_path, 0o666)
         print(f"Sample HTML successfully saved to {file_path} ({content_len} bytes)")
 
-    def run(self, url: str, db_collection, backfill_date: Optional[str] = None):
-        """전체 수집 프로세스 실행 (Backfill 지원)"""
+    def run(self, url: str, db_connection, backfill_date: Optional[str] = None, page: Optional[int] = None):
+        """전체 수집 프로세스 실행 (Backfill 및 페이지네이션 지원)"""
         print(f"Starting collection from {self.source_name}...")
         if backfill_date:
-            print(f"Backfilling data for date: {backfill_date}")
-            url = self._get_backfill_url(url, backfill_date)
+            print(f"Backfilling data for date: {backfill_date}, page: {page}")
+            url = self._get_backfill_url(url, backfill_date, page=page)
 
         html = self.fetch(url)
         items = self.parse(html)
-        self.save(items, db_collection)
+        self.save(items, db_connection, html)
         print(f"Successfully collected {len(items)} items from {self.source_name}.")
 
-    def _get_backfill_url(self, base_url: str, date_str: str) -> str:
-        """날짜별 백필 URL 생성 (자식 클래스에서 오버라이드)"""
+    def _get_backfill_url(self, base_url: str, date_str: str, page: Optional[int] = None) -> str:
+        """날짜 및 페이지별 백필 URL 생성 (자식 클래스에서 오버라이드)"""
         return base_url
 
