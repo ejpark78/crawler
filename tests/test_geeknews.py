@@ -33,6 +33,88 @@ def test_get_backfill_url_combinations():
     with pytest.raises(ValueError, match="Page number is required"):
         scraper._get_backfill_url(base, "comments")
 
+def test_fetch_comments_with_mock(scraper, mocker):
+    """
+    fetch_comments의 파싱 로직을 검증합니다.
+    JSON-LD와 HTML 요소가 결합되어 댓글이 정상적으로 추출되는지 확인합니다.
+    """
+    mock_html = """
+    <html>
+        <script type="application/ld+json">
+        {
+            "@context": "http://schema.org",
+            "@type": "DiscussionForumPosting",
+            "comment": [
+                {
+                    "url": "https://news.hada.io/topic?id=123&cid=100",
+                    "author": {"name": "User1"},
+                    "text": "First comment",
+                    "comment": [
+                        {
+                            "url": "https://news.hada.io/topic?id=123&cid=101",
+                            "author": {"name": "User2"},
+                            "text": "Reply to first"
+                        }
+                    ]
+                },
+                {
+                    "url": "https://news.hada.io/topic?id=123&cid=102",
+                    "author": {"name": "User3"},
+                    "text": "Second comment"
+                }
+            ]
+        }
+        </script>
+        <body>
+            <div id="cid100" class="comment">
+                <span class="comment_contents">First comment <b>Bold</b></span>
+            </div>
+            <div id="cid101" class="comment">
+                <span class="comment_contents">Reply to first <i>Italic</i></span>
+            </div>
+            <div id="cid102" class="comment">
+                <span class="comment_contents">Second comment <a href="#">Link</a></span>
+            </div>
+        </body>
+    </html>
+    """
+    scraper.fetch = mocker.Mock(return_value=mock_html)
+
+    comments = scraper.fetch_comments("https://news.hada.io/topic?id=123")
+
+    assert len(comments) == 3
+
+    # User1 (Root)
+    c1 = next(c for c in comments if c.comment_id == "100")
+    assert c1.author == "User1"
+    assert c1.content == "First comment"
+    assert "<b>Bold</b>" in c1.raw_html
+
+    # User2 (Child)
+    c2 = next(c for c in comments if c.comment_id == "101")
+    assert c2.author == "User2"
+    assert c2.content == "Reply to first"
+    assert "<i>Italic</i>" in c2.raw_html
+
+    # User3 (Root)
+    c3 = next(c for c in comments if c.comment_id == "102")
+    assert c3.author == "User3"
+    assert c3.content == "Second comment"
+    assert "<a href=\"#\">Link</a>" in c3.raw_html
+
+def test_fetch_comments_no_json_ld(scraper, mocker):
+    """JSON-LD가 없는 경우 빈 리스트를 반환하는지 확인합니다."""
+    scraper.fetch = mocker.Mock(return_value="<html><body>No JSON here</body></html>")
+    comments = scraper.fetch_comments("https://news.hada.io/topic?id=123")
+    assert comments == []
+
+def test_fetch_comments_invalid_json(scraper, mocker):
+    """JSON-LD 형식이 잘못된 경우 빈 리스트를 반환하는지 확인합니다."""
+    mock_html = "<html><script type='application/ld+json'>{ invalid json }</script></html>"
+    scraper.fetch = mocker.Mock(return_value=mock_html)
+    comments = scraper.fetch_comments("https://news.hada.io/topic?id=123")
+    assert comments == []
+
 class SampleCollector:
     """
     GeekNews의 랜덤한 페이지를 수집하고 검증하는 헬퍼 클래스

@@ -20,7 +20,7 @@
 # 🏗️ Architecture: Multi-Source Strategy
 1. **Abstract Base Class**: `BaseScraper`를 정의하여 모든 크롤러의 `fetch`, `parse`, `save`, `save_to_json`, `collect_sample_html` 인터페이스를 표준화.
 2. **Target Sources**:
-    - **GeekNews**: `https://news.hada.io/` (구현 완료: 제목, URL, 요약, 댓글 수집 및 백필 지원)
+    - **GeekNews**: `https://news.hada.io/` (구현 완료: 제목, URL, 요약, 댓글 수집, 날짜/페이지 기반 백필, 최신 댓글 리스트 수집 지원)
     - **AI News**: `https://www.ainews.com/`
     - **Daily Dose of DS**: `https://www.dailydoseofds.com/archive/`
     - **DEVOCEAN**: `https://devocean.sk.com/tech`

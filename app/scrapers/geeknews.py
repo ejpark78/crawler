@@ -186,26 +186,19 @@ class GeekNewsScraper(BaseScraper):
         """
         base = base_url.rstrip('/')
 
-        # 댓글 리스트 수집 모드 확인
         if date_str == 'comments':
             if page is None:
                 raise ValueError("Page number is required when date_str is 'comments'")
             return f"{base}/comments?page={page}"
 
-        # 날짜 형식인지 확인 (예: 2026-03-09)
         import re
         if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
             url = f"{base}/past?day={date_str}"
-            if page:
-                url += f"&page={page}"
-            return url
+            return f"{url}&page={page}" if page else url
 
-        # 숫자(페이지 번호)인 경우
         if date_str.isdigit():
             page_num = int(date_str)
-            if page_num <= 5:
-                return f"{base}/?page={page_num}"
-            else:
-                return f"{base}/past?page={page_num}"
+            prefix = "" if page_num <= 5 else "/past"
+            return f"{base}{prefix}?page={page_num}"
 
         return base_url
