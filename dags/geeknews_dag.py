@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.utils.dates import days_ago
+from datetime import timedelta
 
 
 GEEKNEWS_BASE_URL = "https://news.hada.io/"
@@ -20,9 +21,11 @@ with DAG(
     # Dynamic Task Mapping: 실행 시점에 pages 리스트만큼 태스크가 동적으로 생성됨
     collect = BashOperator.partial(
         task_id="collect",
+        execution_timeout=timedelta(hours=1),
     ).expand(
         bash_command=[
-            f"docker compose exec worker uv run python -m app.main "
+            "docker compose -f /home/airflow/workspace/compose.yml run --rm "
+            f"worker uv run python -m app.main "
             f"--source GeekNews --url {GEEKNEWS_BASE_URL} "
             f"--date {{{{ ds }}}} --page {p}"
             for p in PAGES

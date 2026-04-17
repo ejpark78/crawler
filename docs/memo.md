@@ -54,4 +54,25 @@ docker run --rm \
       --page 1
 
 
+1. 로그 파일 경로 확인  
+docker compose exec airflow ls -R /opt/airflow/logs/dag_id=geeknews/
+docker compose exec airflow rm -rf /opt/airflow/logs/dag_id=geeknews/*
+
+2. 가장 최근에 실패한 태스크 로그 읽기            
+(로그 파일 이름이 run_id=backfill__2026-03-25... 형태일 것입니다. 그 파일의 내용을 확인해 주세요.)
+# 예시: 로그 파일 하나를 지정해서 확인
+            
+docker compose exec airflow cat /opt/airflow/logs/dag_id=geeknews/run_id=backfill__2026-03-25T00:00:00+00:00/task_id=collect/map_index=0/attempt=1.log
+
+
+
+
+
+docker compose exec postgres psql -U airflow -d airflow -c "DELETE FROM task_instance WHERE dag_id='geeknews';"  
+
+
+
+docker compose exec airflow cat /opt/airflow/logs/dag_id=geeknews/run_id=backfill__2026-03-25T00:00:00+00:00/task_id=collect/map_index=0/attempt=1.log
+
+
 ```
