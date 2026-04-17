@@ -41,7 +41,11 @@ collect:
 	  -v $(shell pwd):/app \
 	  --network crawler_default \
 	  crawler-app:latest \
-	  python -m app.main --source $(SOURCE) --url $(URL) --date $(DATE) --page $(PAGE)
+	  python -m app.main \
+	  	--source $(SOURCE) \
+		--url $(URL) \
+		--date $(DATE) \
+		--page $(PAGE)
 
 # Run tests inside the app container
 test:
