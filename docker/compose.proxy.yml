@@ -1,7 +1,5 @@
 services:
   proxy:
-    profiles:
-      - airflow
     image: traefik:latest
     restart: always
     ports:

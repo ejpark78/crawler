@@ -9,7 +9,6 @@ __pycache__/
 *.so
 
 # Environments
-.env
 .venv
 venv/
 ENV/

@@ -1,7 +1,5 @@
 services:
   airflow:
-    profiles:
-      - airflow
     build:
       context: ..
       dockerfile: docker/airflow/Dockerfile
@@ -26,6 +24,7 @@ services:
       - "traefik.http.routers.airflow.entrypoints=web"
       - "traefik.http.services.airflow.loadbalancer.server.port=8080"
     volumes:
+      - ..:/app
       - ../dags:/opt/airflow/dags:ro
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /app
@@ -40,8 +39,6 @@ services:
       retries: 3
 
   postgres:
-    profiles:
-      - airflow
     networks:
       - airflow-net
     image: postgres:13
@@ -58,8 +55,6 @@ services:
       retries: 5
 
   pgadmin:
-    profiles:
-      - airflow
     networks:
       - airflow-net
     image: dpage/pgadmin4
@@ -84,8 +79,6 @@ services:
       retries: 3
 
   mongodb:
-    profiles:
-      - airflow
     networks:
       - airflow-net
     image: mongo:latest
@@ -98,8 +91,6 @@ services:
       retries: 5
 
   mongo-express:
-    profiles:
-      - airflow
     networks:
       - airflow-net
     image: mongo-express

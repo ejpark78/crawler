@@ -47,4 +47,4 @@ COPY . .
 # Create a symbolic link for undetected-chromedriver to find chromium easily
 RUN ln -s /usr/bin/chromium /usr/bin/google-chrome
 
-CMD ["tail", "-f", "/dev/null"]
+# CMD ["tail", "-f", "/dev/null"]

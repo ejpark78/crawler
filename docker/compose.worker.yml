@@ -1,14 +1,10 @@
 services:
   worker:
-    profiles: 
-      - worker
     build:
       context: ..
       dockerfile: docker/app/Dockerfile
     image: crawler/worker:latest
-    depends_on:
-      mongodb:
-        condition: service_healthy
+    restart: no
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
