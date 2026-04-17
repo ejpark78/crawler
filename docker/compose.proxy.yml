@@ -2,13 +2,11 @@ services:
   proxy:
     profiles:
       - airflow
-    build:
-      context: proxy
-      dockerfile: Dockerfile
-    image: crawler/proxy:latest
+    image: traefik:latest
     restart: always
     ports:
       - "80:80"
+      - "8080:8080"
     networks:
       - airflow-net
     depends_on:
@@ -18,6 +16,8 @@ services:
         condition: service_started
       mongo-express:
         condition: service_started
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 networks:
   airflow-net:

@@ -18,6 +18,12 @@ services:
     working_dir: /app
     tty: true
     stdin_open: true
+    networks:
+      - airflow-net
 
 volumes:
   mongodb_data:
+
+networks:
+  airflow-net:
+    external: true

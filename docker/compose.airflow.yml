@@ -20,18 +20,25 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_HOST=${POSTGRES_HOST}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.airflow.rule=PathPrefix(`/af`)"
+      - "traefik.http.routers.airflow.entrypoints=web"
+      - "traefik.http.routers.airflow.middlewares=airflow-stripprefix"
+      - "traefik.http.middlewares.airflow-stripprefix.stripprefix.prefixes=/af"
+      - "traefik.http.services.airflow.loadbalancer.server.port=8080"
     volumes:
       - ../dags:/opt/airflow/dags:ro
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /app
     command: standalone
-    ports:
-      - "8080:8080"
+    # ports:
+    #   - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/af/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/af/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -60,6 +67,13 @@ services:
     networks:
       - airflow-net
     image: dpage/pgadmin4
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=PathPrefix(`/pg`)"
+      - "traefik.http.routers.pgadmin.entrypoints=web"
+      - "traefik.http.routers.pgadmin.middlewares=pgadmin-stripprefix"
+      - "traefik.http.middlewares.pgadmin-stripprefix.stripprefix.prefixes=/pg"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
@@ -67,7 +81,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -92,6 +106,13 @@ services:
     networks:
       - airflow-net
     image: mongo-express
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-express.rule=PathPrefix(`/mg`)"
+      - "traefik.http.routers.mongo-express.entrypoints=web"
+      - "traefik.http.routers.mongo-express.middlewares=mongo-express-stripprefix"
+      - "traefik.http.middlewares.mongo-express-stripprefix.stripprefix.prefixes=/mg"
+      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
     environment:
       - ME_CONFIG_MONGODB_SERVER=${ME_CONFIG_MONGODB_SERVER}
       - ME_CONFIG_MONGODB_PORT=${ME_CONFIG_MONGODB_PORT}
@@ -107,6 +128,7 @@ services:
 
 volumes:
   postgres_data:
+  mongodb_data:
 
 networks:
   airflow-net:
