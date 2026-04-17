@@ -1,5 +1,7 @@
 services:
   airflow:
+    profiles: 
+      - airflow
     build:
       context: ..
       dockerfile: docker/airflow/Dockerfile
@@ -35,6 +37,8 @@ services:
       retries: 3
 
   postgres:
+    profiles: 
+      - airflow
     image: postgres:13
     environment:
       - POSTGRES_USER=airflow
@@ -51,6 +55,8 @@ services:
       retries: 5
 
   pgadmin:
+    profiles: 
+      - airflow
     image: dpage/pgadmin4
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@admin.com
@@ -67,6 +73,41 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  mongodb:
+    profiles: 
+      - airflow
+    image: mongo:latest
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - airflow-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    profiles: 
+      - airflow
+    image: mongo-express
+    # ports:
+    #   - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=password123
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - mongodb
+    networks:
+      - airflow-net
 
 networks:
   airflow-net:

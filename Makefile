@@ -21,11 +21,11 @@ claude:
 
 # Start all services
 up:
-	docker compose --profile airflow up -d
+	docker compose --profile airflow -p airflow up -d
 
 # Stop all services and remove containers
 down:
-	docker compose --profile airflow down
+	docker compose --profile airflow -p airflow down
 
 # Restart services
 restart: down up
@@ -60,19 +60,20 @@ test:
 # Airflow Backfill
 # Example: make backfill START=2026-04-01 END=2026-04-17
 backfill:
-	docker compose --profile airflow exec airflow airflow dags backfill \
+	docker compose --profile airflow -p airflow exec airflow airflow dags backfill \
 	  -s $(START) -e $(END) $(DAG_ID)
 
 # Clear Airflow Task States
 # Example: make clear START=2026-04-01 END=2026-04-17
 clear:
-	docker compose --profile airflow exec -T airflow airflow tasks clear -y \
+	docker compose --profile airflow -p airflow exec -T airflow airflow tasks clear -y \
 	  -s $(START) -e $(END) $(DAG_ID)
 
 # Reset Airflow admin password
-init-pw:
-	docker compose --profile airflow exec airflow users reset-password \
-		--username admin --password admin
+reset-pw:
+	docker compose --profile airflow -p airflow exec airflow \
+		airflow users reset-password \
+			--username admin --password admin
 
 # --- Database ---
 
