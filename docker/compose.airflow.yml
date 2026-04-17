@@ -7,6 +7,8 @@ services:
       dockerfile: docker/airflow/Dockerfile
     image: crawler/airflow:latest
     user: "root"
+    networks:
+      - airflow-net
     environment:
       - AIRFLOW__CORE__EXECUTOR=${AIRFLOW__CORE__EXECUTOR}
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
@@ -23,18 +25,22 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /app
     command: standalone
+    ports:
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/af/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   postgres:
-    profiles: 
+    profiles:
       - airflow
+    networks:
+      - airflow-net
     image: postgres:13
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -51,6 +57,8 @@ services:
   pgadmin:
     profiles:
       - airflow
+    networks:
+      - airflow-net
     image: dpage/pgadmin4
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
@@ -58,15 +66,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:80"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   mongodb:
-    profiles: 
+    profiles:
       - airflow
+    networks:
+      - airflow-net
     image: mongo:latest
     volumes:
       - mongodb_data:/data/db
@@ -79,6 +89,8 @@ services:
   mongo-express:
     profiles:
       - airflow
+    networks:
+      - airflow-net
     image: mongo-express
     environment:
       - ME_CONFIG_MONGODB_SERVER=${ME_CONFIG_MONGODB_SERVER}
@@ -87,11 +99,15 @@ services:
       - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
     depends_on:
       - mongodb
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8081"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:
+
+networks:
+  airflow-net:
+    external: true
