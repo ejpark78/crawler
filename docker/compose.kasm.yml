@@ -1,0 +1,46 @@
+services:
+
+  kasm:
+    image: crawler/kasm:latest
+    privileged: false
+    shm_size: "1gb"
+    build:
+      context: ../docker/kasm
+      dockerfile: Dockerfile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kasm.rule=PathPrefix(`/kasm`)"
+      - "traefik.http.routers.kasm.entrypoints=web"
+      - "traefik.http.routers.kasm.middlewares=kasm-stripprefix"
+      - "traefik.http.middlewares.kasm-stripprefix.stripprefix.prefixes=/kasm"
+      - "traefik.http.services.kasm.loadbalancer.server.port=6901"
+      - "traefik.http.services.kasm.loadbalancer.server.scheme=https"
+      - "traefik.http.services.kasm.loadbalancer.server.tls.insecureSkipVerify=true"      
+    environment:
+      - KASM_USER=${KASM_USER-kasm-user}
+      - VNC_PW=${VNC_PW-kasm2026}
+      - LANG=${LANG-ko_KR.UTF-8}
+      - LANGUAGE=${LANGUAGE-ko_KR.UTF-8}
+      - LC_ALL=${LC_ALL-ko_KR.UTF-8}
+      - XMODIFIERS=@im=fcitx
+      - GTK_IM_MODULE=fcitx
+      - QT_IM_MODULE=fcitx
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+      - ${PWD}/volumes/kasm:/mnt
+      - ${PWD}/volumes/kasm/home:/home/kasm-user
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - airflow-net
+    healthcheck:
+      test: ["CMD", "curl", "-k", "https://localhost:6901/api/health"]
+      interval: 30s      
+      timeout: 10s       
+      retries: 3          
+      start_period: 15s  
+
+networks:
+  airflow-net:
+    external: true

@@ -1,3 +1,4 @@
 include:
   - docker/compose.proxy.yml
+  - docker/compose.kasm.yml
   - docker/compose.airflow.yml
