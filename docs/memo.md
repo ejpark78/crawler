@@ -75,4 +75,7 @@ docker compose exec postgres psql -U airflow -d airflow -c "DELETE FROM task_ins
 docker compose exec airflow cat /opt/airflow/logs/dag_id=geeknews/run_id=backfill__2026-03-25T00:00:00+00:00/task_id=collect/map_index=0/attempt=1.log
 
 
+
+docker compose -f /app/compose.yml --profile worker run --rm  -w /app worker uv run python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-03-25 --page 1
+
 ```

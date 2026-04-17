@@ -1,11 +1,13 @@
 services:
   worker:
+    profiles: 
+      - worker
     build:
       context: .
       dockerfile: docker/app/Dockerfile
     image: crawler/worker:latest
     depends_on:
-      postgres:
+      mongodb:
         condition: service_healthy
     environment:
       - POSTGRES_USER=airflow
@@ -13,19 +15,15 @@ services:
       - POSTGRES_DB=airflow
       - POSTGRES_HOST=postgres
       - PYTHONUNBUFFERED=1
-    volumes:
-      - .:/app
     working_dir: /app
     tty: true
     stdin_open: true
-    command: tail -f /dev/null
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8080"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+    networks:
+      - worker-net
 
   airflow:
+    profiles: 
+      - airflow
     build:
       context: .
       dockerfile: docker/airflow/Dockerfile
@@ -42,17 +40,18 @@ services:
       - POSTGRES_DB=airflow
       - POSTGRES_HOST=postgres
     volumes:
-      - .:/home/airflow/workspace
+      - .:/app
       - ./dags:/opt/airflow/dags
-      - ./app:/opt/airflow/app
       - /var/run/docker.sock:/var/run/docker.sock
-    working_dir: /home/airflow/workspace
+    working_dir: /app
     ports:
       - "8080:8080"
     command: standalone
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - airflow-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -60,6 +59,8 @@ services:
       retries: 3
 
   postgres:
+    profiles: 
+      - airflow
     image: postgres:13
     environment:
       - POSTGRES_USER=airflow
@@ -67,6 +68,8 @@ services:
       - POSTGRES_DB=airflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - airflow-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow"]
       interval: 10s
@@ -74,11 +77,15 @@ services:
       retries: 5
 
   mongodb:
+    profiles: 
+      - worker
     image: mongo:latest
     ports:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - worker-net
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -86,6 +93,8 @@ services:
       retries: 5
 
   mongo-express:
+    profiles: 
+      - worker
     image: mongo-express
     ports:
       - "8081:8081"
@@ -101,8 +110,12 @@ services:
       retries: 3
     depends_on:
       - mongodb
+    networks:
+      - worker-net
 
   pgadmin:
+    profiles: 
+      - airflow
     image: dpage/pgadmin4
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@admin.com
@@ -112,11 +125,19 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - airflow-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+networks:
+  airflow-net:
+    driver: bridge
+  worker-net:
+    driver: bridge
 
 volumes:
   postgres_data:

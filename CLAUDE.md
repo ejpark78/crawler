@@ -9,7 +9,7 @@
 ### 1. 개발 및 실행 명령어
 * **전체 서비스 구동**: `docker compose up --build`
 * **컨테이너 내 테스트 실행 (TDD)**: `docker compose exec app uv run pytest`
-* **샘플 데이터 수집**: `docker compose exec app uv run python -m app.collect_samples` (구현 예정)
+* **샘플 데이터 수집**: `docker compose exec app uv run python -m app.collect_samples`
 * **데이터 수집 테스트 (Local)**: `make collect`
 * **데이터 백필/클리어 (Airflow)**: `make backfill`, `make clear`
 * **DB 쉘 접속**: `make mongo-shell`, `make pg-shell`
@@ -23,7 +23,8 @@
 
 # 🏗️ Architecture: Multi-Source Strategy
 1. **Abstract Base Class**: `BaseScraper`를 정의하여 모든 크롤러의 `fetch`, `parse`, `save`, `save_to_json`, `collect_sample_html` 인터페이스를 표준화.
-2. **Target Sources**:
+2. **Registry Pattern**: `app/scrapers/registry.py`를 통해 구현된 스크레이퍼들을 동적으로 관리하고 로드함.
+3. **Target Sources**:
     - **GeekNews**: `https://news.hada.io/` (구현 완료: 제목, URL, 요약, 댓글 수집, 날짜/페이지 기반 백필, 최신 댓글 리스트 수집 지원)
     - **AI News**: `https://www.ainews.com/`
     - **Daily Dose of DS**: `https://www.dailydoseofds.com/archive/`
@@ -36,7 +37,7 @@
     - **Reddit LocalLLaMA**: `https://www.reddit.com/r/LocalLLaMA`
     - **Reddit MachineLearning**: `https://www.reddit.com/r/MachineLearning/`
     - **Top LLM Papers of the Week**: `https://corca.substack.com/`
-3. **Idempotency**: MongoDB 저장 시 `url`을 PK로 사용하여 중복 데이터 방지 (Upsert 로직).
+4. **Idempotency**: MongoDB 저장 시 `url`을 PK로 사용하여 중복 데이터 방지 (Upsert 로직).
 
 # 🛠 Tech Stack
 - **Package Manager**: `uv` (가상환경 및 의존성 고속 관리)
@@ -50,12 +51,14 @@
 - **Stealth & Rate-limit**: Scrapling의 `Stealth` 모드와 사용자 정의 Request Headers, 랜덤 딜레이로 봇 차단 방지.
 - **Deep Collection**: 단순 리스트 수집을 넘어 상세 페이지 진입을 통한 댓글 및 상세 내용 수집.
 
-# 📂 프로젝트 구조 (Target)
+# 📂 프로젝트 구조
+- `app/main.py`: 애플리케이션 진입점
 - `app/models.py`: Pydantic 뉴스 및 댓글 데이터 모델
-- `app/scrapers/base.py`: 추상 인터페이스 및 공통 유틸리티 (JSON 저장, 샘플 수집 등)
+- `app/scrapers/base.py`: 추상 인터페이스 및 공통 유틸리티
+- `app/scrapers/registry.py`: 스크레이퍼 등록 및 관리 로직
 - `app/scrapers/{geeknews, ...}.py`: 소스별 구현체
 - `tests/`: 소스별 유닛 테스트 코드 및 `tests/site/{source}/` 샘플 데이터
-- `dags/news_collector_dag.py`: Dynamic Task를 활용한 통합 DAG
+- `dags/`: Airflow DAG 정의 및 `dags/utils/` 헬퍼 함수
 - `docker-compose.yml` & `Dockerfile`: uv 최적화 컨테이너 설정
 - `CLAUDE.md`: 프로젝트 가이드 및 운영 명령어
 
