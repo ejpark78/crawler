@@ -4,14 +4,8 @@ services:
       - airflow
     image: traefik:latest
     restart: always
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
-      - "8080:8080"
     networks:
       - airflow-net
     depends_on:
@@ -21,9 +15,25 @@ services:
         condition: service_started
       mongo-express:
         condition: service_started
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik_dash.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.traefik_dash.service=api@internal"
+      - "traefik.http.routers.traefik_dash.entrypoints=web"
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--ping=true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 networks:
   airflow-net:
-    external: true
+    driver: bridge
