@@ -10,6 +10,10 @@
 * **전체 서비스 구동**: `docker compose up --build`
 * **컨테이너 내 테스트 실행 (TDD)**: `docker compose exec app uv run pytest`
 * **샘플 데이터 수집**: `docker compose exec app uv run python -m app.collect_samples` (구현 예정)
+* **데이터 수집 테스트 (Local)**: `make collect`
+* **데이터 백필/클리어 (Airflow)**: `make backfill`, `make clear`
+* **DB 쉘 접속**: `make mongo-shell`, `make pg-shell`
+* **코드 포맷팅**: `docker compose exec app uv run isort . && docker compose exec app uv run black .`
 
 # 🧪 TDD & Quality Assurance
 1. **Test-First**: 코드 구현 전 `pytest`와 `pytest-vcr`를 사용하여 각 소스별 파싱 로직 테스트를 먼저 작성함.

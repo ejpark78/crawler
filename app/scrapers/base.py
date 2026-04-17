@@ -5,6 +5,11 @@ import random
 import logging
 from app.models import NewsItem
 from scrapling import StealthyFetcher
+from bs4 import BeautifulSoup
+from curl_cffi import requests
+import json
+import requests
+import os
 
 # 로깅 설정
 logging.basicConfig(
@@ -64,7 +69,6 @@ class BaseScraper(ABC):
 
     def save_to_json(self, items: List[NewsItem], file_path: str):
         """수집된 데이터를 JSON 파일로 저장 (comments 필드는 제외하여 저장)"""
-        import json
         data = []
         for item in items:
             item_dict = item.model_dump()
@@ -78,7 +82,6 @@ class BaseScraper(ABC):
 
     def fetch_simple(self, url: str) -> str:
         """브라우저 없이 HTTP 요청만으로 HTML을 가져오는 가벼운 메서드 (Fallback용)"""
-        import requests
         print(f"Using fallback simple fetch for {url}...")
         response = requests.get(url, headers=getattr(self, 'headers', {}), timeout=10)
         response.raise_for_status()
@@ -86,8 +89,6 @@ class BaseScraper(ABC):
 
     def collect_sample_html(self, url: str, file_path: str):
         """테스트를 위한 샘플 HTML 수집 및 저장"""
-        import os
-        from bs4 import BeautifulSoup
         print(f"Collecting sample HTML from {url}...")
         try:
             html = self.fetch(url)

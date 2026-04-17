@@ -5,6 +5,9 @@ from datetime import datetime
 from app.scrapers.base import BaseScraper
 from app.models import NewsItem, CommentItem
 from scrapling import StealthyFetcher
+from bs4 import BeautifulSoup
+from curl_cffi import requests
+
 
 logger = logging.getLogger("GeekNewsScraper")
 
@@ -52,8 +55,6 @@ class GeekNewsScraper(BaseScraper):
 
     def _do_fetch(self, url: str) -> str:
         """curl-cffi를 사용하여 curl과 동일한 핑거프린트로 HTML 가져오기"""
-        from curl_cffi import requests
-
         logger.info(f"Fetching {url} using curl-cffi (Impersonating Chrome)...")
 
         try:
@@ -73,7 +74,6 @@ class GeekNewsScraper(BaseScraper):
 
     def parse(self, html: str) -> List[NewsItem]:
         """GeekNews HTML 파싱 로직"""
-        from bs4 import BeautifulSoup
         soup = BeautifulSoup(html, 'html.parser')
 
         rows = soup.select('div.topic_row')
@@ -133,9 +133,6 @@ class GeekNewsScraper(BaseScraper):
 
     def fetch_comments(self, url: str) -> tuple[List[CommentItem], Optional[str]]:
         """상세 페이지에서 JSON-LD와 HTML을 결합하여 댓글 리스트 및 원본 JSON-LD를 수집"""
-        from bs4 import BeautifulSoup
-        import json
-
         html = self.fetch(url)
         soup = BeautifulSoup(html, 'html.parser')
 
