@@ -24,8 +24,6 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.airflow.rule=PathPrefix(`/af`)"
       - "traefik.http.routers.airflow.entrypoints=web"
-      - "traefik.http.routers.airflow.middlewares=airflow-stripprefix"
-      - "traefik.http.middlewares.airflow-stripprefix.stripprefix.prefixes=/af"
       - "traefik.http.services.airflow.loadbalancer.server.port=8080"
     volumes:
       - ../dags:/opt/airflow/dags:ro
@@ -38,7 +36,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/af/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/af/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -81,7 +79,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -121,7 +119,7 @@ services:
     depends_on:
       - mongodb
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081"]
       interval: 30s
       timeout: 10s
       retries: 3
