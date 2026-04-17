@@ -21,11 +21,11 @@ claude:
 
 # Start all services
 up:
-	docker compose --profile airflow -p airflow up -d
+	docker compose --profile airflow up -d
 
 # Stop all services and remove containers
 down:
-	docker compose --profile airflow -p airflow down
+	docker compose --profile airflow down
 
 # Restart services
 restart: down up
@@ -36,14 +36,14 @@ build:
 
 # View logs
 logs:
-	docker compose --profile airflow -p airflow logs -f
+	docker compose --profile airflow logs -f
 
 # --- Collection & Testing ---
 
 # Single collection run (Local test)
 # Example: make collect DATE=2026-03-25 PAGE=1
 collect:
-	docker compose --profile worker -p airflow run \
+	docker compose --profile worker run \
 		--rm -e PYTHONPATH=/app worker uv run python -m app.main \
 		--source $(SOURCE) \
 		--url $(URL) \
@@ -52,25 +52,25 @@ collect:
 
 # Run tests inside the app container
 test:
-	docker compose --profile worker -p airflow exec worker uv run pytest
+	docker compose --profile worker exec worker uv run pytest
 
 # --- Airflow ---
 
 # Airflow Backfill
 # Example: make backfill START=2026-04-01 END=2026-04-17
 backfill:
-	docker compose --profile airflow -p airflow exec airflow airflow dags backfill \
+	docker compose --profile airflow exec airflow airflow dags backfill \
 	  -s $(START) -e $(END) $(DAG_ID)
 
 # Clear Airflow Task States
 # Example: make clear START=2026-04-01 END=2026-04-17
 clear:
-	docker compose --profile airflow -p airflow exec -T airflow airflow tasks clear -y \
+	docker compose --profile airflow exec -T airflow airflow tasks clear -y \
 	  -s $(START) -e $(END) $(DAG_ID)
 
 # Reset Airflow admin password
 reset-pw:
-	docker compose --profile airflow -p airflow exec airflow \
+	docker compose --profile airflow exec airflow \
 		airflow users reset-password \
 			--username admin --password admin
 
@@ -78,15 +78,15 @@ reset-pw:
 
 # Access MongoDB shell
 mongo-shell:
-	docker compose --profile worker -p airflow exec mongodb mongosh crawler_db
+	docker compose --profile worker exec mongodb mongosh crawler_db
 
 # Access PostgreSQL shell
 pg-shell:
-	docker compose --profile airflow -p airflow exec postgres bash
+	docker compose --profile airflow exec postgres bash
 # 	docker compose exec postgres psql -U airflow -d airflow
 
 airflow-bash:
-	docker compose --profile airflow -p airflow exec airflow bash
+	docker compose --profile airflow exec airflow bash
 
 worker-bash:
-	docker compose --profile worker -p airflow exec worker bash
+	docker compose --profile worker exec worker bash

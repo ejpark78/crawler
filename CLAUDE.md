@@ -59,7 +59,10 @@
 - `app/scrapers/{geeknews, ...}.py`: 소스별 구현체
 - `tests/`: 소스별 유닛 테스트 코드 및 `tests/site/{source}/` 샘플 데이터
 - `dags/`: Airflow DAG 정의 및 `dags/utils/` 헬퍼 함수
-- `docker-compose.yml` & `Dockerfile`: uv 최적화 컨테이너 설정
+- `compose.yml`: 메인 설정 (include 방식으로 분리된 파일 취합)
+- `docker/compose.worker.yml`: Worker 및 DB 관련 설정 (Profile: worker)
+- `docker/compose.airflow.yml`: Airflow 및 DB 관련 설정 (Profile: airflow)
+- `docker/app/Dockerfile` & `docker/airflow/Dockerfile`: 서비스별 최적화 설정
 - `CLAUDE.md`: 프로젝트 가이드 및 운영 명령어
 
 # 🏗️ 작업 단계 (TDD Workflow)
@@ -71,3 +74,4 @@
 # ⚠️ Constraints
 - 모든 실행은 `uv run` 환경에서 격리되어야 함.
 - 에러 핸들링과 로깅을 상세히 기록하여 Airflow UI에서 모니터링 가능하게 할 것.
+- Docker Compose 실행 시 프로젝트 네임스페이스(`-p`) 분리에 주의하고, 서비스 간 네트워크 통신(`airflow-net`)을 보장할 것.

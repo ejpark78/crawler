@@ -1,3 +1,4 @@
 include:
   - docker/compose.worker.yml
   - docker/compose.airflow.yml
+  - docker/compose.proxy.yml
