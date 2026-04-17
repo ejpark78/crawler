@@ -26,6 +26,7 @@ services:
     volumes:
       - ..:/app
       - ../dags:/opt/airflow/dags:ro
+      - ./volumes/airflow/logs:/opt/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /app
     command: standalone
@@ -47,7 +48,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./volumes/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow"]
       interval: 10s
@@ -83,7 +84,7 @@ services:
       - airflow-net
     image: mongo:latest
     volumes:
-      - mongodb_data:/data/db
+      - ./volumes/mongodb:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -112,10 +113,6 @@ services:
       timeout: 10s
       retries: 3
 
-volumes:
-  postgres_data:
-  mongodb_data:
-
 networks:
   airflow-net:
-    driver: bridge
+    external: true

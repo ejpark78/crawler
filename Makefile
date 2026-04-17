@@ -89,3 +89,7 @@ pgsql:
 	docker compose exec postgres psql -U airflow -d airflow
 
 # docker compose exec postgres psql -U airflow -d airflow -c "DELETE FROM task_instance WHERE dag_id='geeknews';"  
+
+init-net:
+	docker network create -d bridge airflow-net
+	docker network ls

@@ -1,6 +1,6 @@
 services:
   proxy:
-    image: traefik:latest
+    image: traefik:v3.6
     restart: always
     ports:
       - "80:80"
@@ -8,11 +8,11 @@ services:
       - airflow-net
     depends_on:
       airflow:
-        condition: service_started
+        condition: service_healthy
       pgadmin:
-        condition: service_started
+        condition: service_healthy
       mongo-express:
-        condition: service_started
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik_dash.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
@@ -34,4 +34,4 @@ services:
 
 networks:
   airflow-net:
-    driver: bridge
+    external: true
