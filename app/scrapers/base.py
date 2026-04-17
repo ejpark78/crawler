@@ -10,6 +10,8 @@ class BaseScraper(ABC):
 
     def __init__(self, source_name: str):
         self.source_name = source_name
+        # 각 스크래퍼가 사용할 전용 컬렉션 이름을 정의 (기본값: {source_name}_pages)
+        self.collection_name = f"{source_name.lower()}_pages"
         # Scrapling의 Stealth 모드 사용
         self.crawler = StealthyFetcher()
 
@@ -36,11 +38,13 @@ class BaseScraper(ABC):
 
         # db_connection이 MongoClient 인스턴스라고 가정
         db = db_connection["crawler_db"]
-        collection = db["news_items"]
+        collection = db[self.collection_name]
 
         for item in items:
             # mode='json'을 사용하여 datetime 등 JSON 비호환 타입을 문자열로 자동 변환
             doc = item.model_dump(mode='json')
+            # 메인 컬렉션에서는 원본 JSON-LD 데이터를 제외하여 저장 (별도 컬렉션 관리)
+            doc.pop("json_ld_raw", None)
             doc["_id"] = item.url  # URL을 PK로 사용
             doc["html"] = html     # 원본 HTML 저장
 
@@ -49,7 +53,7 @@ class BaseScraper(ABC):
                 {"$set": doc},
                 upsert=True
             )
-        print(f"Successfully saved {len(items)} items to MongoDB.")
+        print(f"Successfully saved {len(items)} items to MongoDB {self.collection_name} collection.")
 
     def save_to_json(self, items: List[NewsItem], file_path: str):
         """수집된 데이터를 JSON 파일로 저장 (comments 필드는 제외하여 저장)"""

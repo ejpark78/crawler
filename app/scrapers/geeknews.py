@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from app.scrapers.base import BaseScraper
 from app.models import NewsItem, CommentItem
 from scrapling import StealthyFetcher
@@ -17,6 +17,50 @@ class GeekNewsScraper(BaseScraper):
             "Connection": "keep-alive",
             "Upgrade-Insecure-Requests": "1",
         }
+
+    def save(self, items: List[NewsItem], db_connection, html: Optional[str] = None):
+        """GeekNews 전용 저장 로직: 메인 데이터와 JSON-LD 원본 데이터를 분리하여 저장"""
+        from datetime import datetime
+        import json
+        # 1. 기본 저장 로직 호출 (news_items 컬렉션에 저장)
+        super().save(items, db_connection, html)
+
+        # 2. JSON-LD 원본 데이터를 JSON 객체로 변환하여 저장 (geeknews 컬렉션)
+        db = db_connection["crawler_db"]
+        json_ld_collection = db["geeknews"]
+
+        count = 0
+        for item in items:
+            if item.json_ld_raw:
+                try:
+                    # JSON 문자열을 딕셔너리로 변환
+                    json_data = json.loads(item.json_ld_raw)
+
+                    # MongoDB 문서 구조 생성
+                    # _id를 url로 설정하여 유일성 보장, 원본 데이터를 최상위에 펼쳐서 저장
+                    doc = {
+                        "_id": item.url,
+                        "url": item.url,
+                        "updated_at": datetime.utcnow()
+                    }
+
+                    # JSON-LD의 내용을 doc에 병합
+                    if isinstance(json_data, dict):
+                        doc.update(json_data)
+                    else:
+                        doc["json_ld_content"] = json_data
+
+                    json_ld_collection.update_one(
+                        {"_id": item.url},
+                        {"$set": doc},
+                        upsert=True
+                    )
+                    count += 1
+                except json.JSONDecodeError as e:
+                    print(f"Failed to parse JSON-LD for {item.url}: {e}")
+
+        if count > 0:
+            print(f"Successfully saved {count} JSON-LD documents to geeknews collection.")
 
     def _do_fetch(self, url: str) -> str:
         """curl-cffi를 사용하여 curl과 동일한 핑거프린트로 HTML 가져오기"""
@@ -69,7 +113,7 @@ class GeekNewsScraper(BaseScraper):
                 if 'topic?id=' in url:
                     continue
 
-                # 댓글 수집을 위해 상세 페이지 URL 추출
+                # 댓글 및 JSON-LD 수집을 위해 상세 페이지 URL 추출
                 comment_link_el = row.select_one('.topicinfo a[href*="topic?id="]')
                 topic_url = None
                 if comment_link_el:
@@ -87,11 +131,12 @@ class GeekNewsScraper(BaseScraper):
                     comments=None # JSON 저장 시 제외하기 위해 None 설정
                 ))
 
-                # 상세 페이지에서 댓글 수집 (동기적으로 수행)
+                # 상세 페이지에서 댓글 및 JSON-LD 원본 데이터 수집
                 if topic_url:
                     try:
-                        comments = self.fetch_comments(topic_url)
+                        comments, json_ld_raw = self.fetch_comments(topic_url)
                         items[-1].comments = comments
+                        items[-1].json_ld_raw = json_ld_raw
                     except Exception as e:
                         print(f"Error fetching comments for {topic_url}: {e}")
 
@@ -104,8 +149,8 @@ class GeekNewsScraper(BaseScraper):
 
         return unique_items
 
-    def fetch_comments(self, url: str) -> List[CommentItem]:
-        """상세 페이지에서 JSON-LD와 HTML을 결합하여 댓글 리스트를 수집"""
+    def fetch_comments(self, url: str) -> tuple[List[CommentItem], Optional[str]]:
+        """상세 페이지에서 JSON-LD와 HTML을 결합하여 댓글 리스트 및 원본 JSON-LD를 수집"""
         from bs4 import BeautifulSoup
         import json
 
@@ -116,13 +161,15 @@ class GeekNewsScraper(BaseScraper):
         script_tag = soup.find('script', type='application/ld+json')
         if not script_tag:
             print(f"No JSON-LD found for {url}")
-            return []
+            return [], None
+
+        json_ld_raw = script_tag.string
 
         try:
-            data = json.loads(script_tag.string)
+            data = json.loads(json_ld_raw)
         except (json.JSONDecodeError, TypeError) as e:
             print(f"Failed to parse JSON-LD for {url}: {e}")
-            return []
+            return [], json_ld_raw
 
         comments = []
 
@@ -171,7 +218,7 @@ class GeekNewsScraper(BaseScraper):
         elif isinstance(root_comments, dict):
             extract_comments_recursive(root_comments)
 
-        return comments
+        return comments, json_ld_raw
 
     def _get_backfill_url(self, base_url: str, date_str: str, page: int = None) -> str:
         """
