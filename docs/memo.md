@@ -50,45 +50,4 @@ docker run --rm \
    python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-16 --page 1
 
 
-
-
-docker compose exec airflow airflow dags backfill \
-   -s 2026-04-09 \
-   -e 2026-04-17 \
-   news_collection_pipeline
-
-
-docker run --rm \
-   -v /home/ejpark/workspace/crawler:/app \
-   --network crawler_default \
-   crawler-app:latest \
-   python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-09 --page 1
-
-
-docker compose exec airflow airflow tasks clear \
-   -s 2026-04-01 \
-   -e 2026-04-17 \
-   news_collection_pipeline
-
-
-
-docker run --rm \
-   -v /home/ejpark/workspace/crawler:/app \
-   --network crawler_default \
-   crawler-app:latest \
-   python -m app.main --source GeekNews \
-   --url https://news.hada.io/ \
-   --date 2026-04-16 \
-   --page 1 
-
-
-
-docker compose exec airflow airflow tasks clear \
-   -s 2026-01-01 \
-   -e 2026-12-31 \
-   news_collection_pipeline && \
-   docker compose restart airflow && \
-   echo "All running tasks cleared and Airflow restarted."
-
-
 ```

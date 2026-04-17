@@ -2,23 +2,29 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 import time
 import random
+import logging
 from app.models import NewsItem
 from scrapling import StealthyFetcher
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger("BaseScraper")
 
 class BaseScraper(ABC):
     """모든 크롤러의 추상 기본 클래스"""
 
     def __init__(self, source_name: str):
         self.source_name = source_name
-        # 각 스크래퍼가 사용할 전용 컬렉션 이름을 정의 (기본값: {source_name}_pages)
         self.collection_name = f"{source_name.lower()}_pages"
-        # Scrapling의 Stealth 모드 사용
         self.crawler = StealthyFetcher()
 
     def fetch(self, url: str) -> str:
         """웹 페이지 HTML을 가져오는 인터페이스 (요청 전 랜덤 딜레이 추가)"""
-        # 봇 차단 방지를 위해 1~3초 사이의 랜덤 딜레이 적용
         delay = random.uniform(1, 3)
+        logger.info(f"Waiting {delay:.2f}s before fetching {url}...")
         time.sleep(delay)
         return self._do_fetch(url)
 
@@ -34,26 +40,27 @@ class BaseScraper(ABC):
 
     def save(self, items: List[NewsItem], db_connection, html: Optional[str] = None):
         """MongoDB에 데이터 저장 (Upsert 방식)"""
-        from pymongo import MongoClient
-
-        # db_connection이 MongoClient 인스턴스라고 가정
         db = db_connection["crawler_db"]
         collection = db[self.collection_name]
 
+        saved_count = 0
         for item in items:
-            # mode='json'을 사용하여 datetime 등 JSON 비호환 타입을 문자열로 자동 변환
-            doc = item.model_dump(mode='json')
-            # 메인 컬렉션에서는 원본 JSON-LD 데이터를 제외하여 저장 (별도 컬렉션 관리)
-            doc.pop("json_ld_raw", None)
-            doc["_id"] = item.url  # URL을 PK로 사용
-            doc["html"] = html     # 원본 HTML 저장
+            try:
+                doc = item.model_dump(mode='json')
+                doc.pop("json_ld_raw", None)
+                doc["_id"] = item.url
+                doc["html"] = html
 
-            collection.update_one(
-                {"_id": item.url},
-                {"$set": doc},
-                upsert=True
-            )
-        print(f"Successfully saved {len(items)} items to MongoDB {self.collection_name} collection.")
+                collection.update_one(
+                    {"_id": item.url},
+                    {"$set": doc},
+                    upsert=True
+                )
+                saved_count += 1
+            except Exception as e:
+                logger.error(f"Failed to save item {item.url}: {e}")
+
+        logger.info(f"Successfully saved {saved_count}/{len(items)} items to {self.collection_name} collection.")
 
     def save_to_json(self, items: List[NewsItem], file_path: str):
         """수집된 데이터를 JSON 파일로 저장 (comments 필드는 제외하여 저장)"""

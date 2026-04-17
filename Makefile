@@ -43,6 +43,12 @@ collect:
 	  crawler-app:latest \
 	  python -m app.main --source $(SOURCE) --url $(URL) --date $(DATE) --page $(PAGE)
 
+# Run tests inside the app container
+test:
+	docker compose exec app uv run pytest
+
+# --- Airflow ---
+
 # Airflow Backfill
 # Example: make backfill START=2026-04-01 END=2026-04-17
 backfill:
@@ -57,7 +63,18 @@ clear:
 	  -s $(START) -e $(END) \
 	  $(DAG_ID)
 
+# Reset Airflow admin password
 init-pw:
 	docker compose exec airflow airflow users reset-password \
 	   --username admin \
 	   --password admin
+
+# --- Database ---
+
+# Access MongoDB shell
+mongo-shell:
+	docker compose exec mongodb mongosh crawler_db
+
+# Access PostgreSQL shell
+pg-shell:
+	docker compose exec postgres psql -U airflow -d airflow

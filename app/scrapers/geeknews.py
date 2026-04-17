@@ -1,14 +1,18 @@
 from typing import List, Optional
+import json
+import logging
+from datetime import datetime
 from app.scrapers.base import BaseScraper
 from app.models import NewsItem, CommentItem
 from scrapling import StealthyFetcher
+
+logger = logging.getLogger("GeekNewsScraper")
 
 class GeekNewsScraper(BaseScraper):
     """GeekNews 크롤러 구현체"""
 
     def __init__(self):
         super().__init__(source_name="GeekNews")
-        # 헤더를 최신 브라우저의 표준적인 형태로 단순화하여 봇 탐지 확률을 낮춤
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -20,12 +24,8 @@ class GeekNewsScraper(BaseScraper):
 
     def save(self, items: List[NewsItem], db_connection, html: Optional[str] = None):
         """GeekNews 전용 저장 로직: 메인 데이터와 JSON-LD 원본 데이터를 분리하여 저장"""
-        from datetime import datetime
-        import json
-        # 1. 기본 저장 로직 호출 (news_items 컬렉션에 저장)
         super().save(items, db_connection, html)
 
-        # 2. JSON-LD 원본 데이터를 JSON 객체로 변환하여 저장 (geeknews 컬렉션)
         db = db_connection["crawler_db"]
         json_ld_collection = db["geeknews"]
 
@@ -33,61 +33,43 @@ class GeekNewsScraper(BaseScraper):
         for item in items:
             if item.json_ld_raw:
                 try:
-                    # JSON 문자열을 딕셔너리로 변환
                     json_data = json.loads(item.json_ld_raw)
-
-                    # MongoDB 문서 구조 생성
-                    # _id를 url로 설정하여 유일성 보장, 원본 데이터를 최상위에 펼쳐서 저장
-                    doc = {
-                        "_id": item.url,
-                        "url": item.url,
-                        "updated_at": datetime.utcnow()
-                    }
-
-                    # JSON-LD의 내용을 doc에 병합
+                    doc = {"_id": item.url, "url": item.url, "updated_at": datetime.utcnow()}
                     if isinstance(json_data, dict):
                         doc.update(json_data)
                     else:
                         doc["json_ld_content"] = json_data
 
                     json_ld_collection.update_one(
-                        {"_id": item.url},
-                        {"$set": doc},
-                        upsert=True
+                        {"_id": item.url}, {"$set": doc}, upsert=True
                     )
                     count += 1
                 except json.JSONDecodeError as e:
-                    print(f"Failed to parse JSON-LD for {item.url}: {e}")
+                    logger.error(f"Failed to parse JSON-LD for {item.url}: {e}")
 
         if count > 0:
-            print(f"Successfully saved {count} JSON-LD documents to geeknews collection.")
+            logger.info(f"Successfully saved {count} JSON-LD documents to geeknews collection.")
 
     def _do_fetch(self, url: str) -> str:
         """curl-cffi를 사용하여 curl과 동일한 핑거프린트로 HTML 가져오기"""
         from curl_cffi import requests
-        import os
 
-        print(f"Fetching {url} using curl-cffi (Impersonating Chrome)...")
+        logger.info(f"Fetching {url} using curl-cffi (Impersonating Chrome)...")
 
         try:
-            # impersonate='chrome' 옵션을 사용하여 실제 크롬 브라우저의 TLS/HTTP2 핑거프린트를 모사함
             response = requests.get(
-                url,
-                headers=self.headers,
-                impersonate="chrome110",
-                timeout=30
+                url, headers=self.headers, impersonate="chrome110", timeout=30
             )
             response.raise_for_status()
             html = response.text
 
             if not html or len(html) < 1000 or "<html" not in html.lower():
-                print(f"DEBUG: curl-cffi returned insufficient content for {url}")
                 raise ValueError("curl-cffi returned insufficient HTML content")
 
             return html
         except Exception as e:
-            print(f"curl-cffi fetch failed: {e}")
-            raise e
+            logger.error(f"curl-cffi fetch failed for {url}: {e}")
+            raise
 
     def parse(self, html: str) -> List[NewsItem]:
         """GeekNews HTML 파싱 로직"""
