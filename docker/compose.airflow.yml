@@ -69,8 +69,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.pgadmin.rule=PathPrefix(`/pg`)"
       - "traefik.http.routers.pgadmin.entrypoints=web"
-      - "traefik.http.routers.pgadmin.middlewares=pgadmin-stripprefix"
+      - "traefik.http.routers.pgadmin.middlewares=pgadmin-stripprefix,pgadmin-scriptname"
       - "traefik.http.middlewares.pgadmin-stripprefix.stripprefix.prefixes=/pg"
+      - "traefik.http.middlewares.pgadmin-scriptname.headers.customrequestheaders.X-Script-Name=/pg"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
@@ -106,20 +107,18 @@ services:
     image: mongo-express
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mongo-express.rule=PathPrefix(`/mg`)"
+      - "traefik.http.routers.mongo-express.rule=PathPrefix(`/me`)"
       - "traefik.http.routers.mongo-express.entrypoints=web"
-      - "traefik.http.routers.mongo-express.middlewares=mongo-express-stripprefix"
-      - "traefik.http.middlewares.mongo-express-stripprefix.stripprefix.prefixes=/mg"
       - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
     environment:
-      - ME_CONFIG_MONGODB_SERVER=${ME_CONFIG_MONGODB_SERVER}
-      - ME_CONFIG_MONGODB_PORT=${ME_CONFIG_MONGODB_PORT}
+      - ME_CONFIG_MONGODB_URL=mongodb://mongodb:27017/
       - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
       - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
+      - ME_CONFIG_SITE_BASEURL=/me/
     depends_on:
       - mongodb
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081"]
+      test: ["CMD", "sh", "-c", "wget --spider -q http://$$ME_CONFIG_BASICAUTH_USERNAME:$$ME_CONFIG_BASICAUTH_PASSWORD@127.0.0.1:8081/me/"]
       interval: 30s
       timeout: 10s
       retries: 3
