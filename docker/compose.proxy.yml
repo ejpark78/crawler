@@ -1,22 +1,23 @@
 services:
   proxy:
     profiles:
-      - airflow  
-    image: traefik:v3.6
+      - airflow
+    build:
+      context: proxy
+      dockerfile: Dockerfile
+    image: crawler/proxy:latest
     ports:
-      - "8000:8000"       # HTTP 진입점
-      - "8080:8080"   # Traefik 대시보드
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:8000"
-    # environment:
-    #   - DOCKER_API_VERSION=1.41
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    healthcheck:
-      test: ["CMD", "wget", "--no-vertices", "--quiet", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - "80:80"
+    networks:
+      - airflow-net
+    depends_on:
+      airflow:
+        condition: service_started
+      pgadmin:
+        condition: service_started
+      mongo-express:
+        condition: service_started
+
+networks:
+  airflow-net:
+    driver: bridge
