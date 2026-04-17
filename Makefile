@@ -39,7 +39,7 @@ ps:
 	watch -d -n 5 docker ps
 
 stats:
-	docker compose stats
+	docker stats
 
 # --- Collection & Testing ---
 # Example: make collect DATE=2026-03-25 PAGE=1
@@ -55,7 +55,7 @@ test:
 	docker compose exec worker uv run pytest
 
 # --- Airflow ---
-# Example: make backfill START=2026-04-01 END=2026-04-17
+# Example: make backfill START=2023-04-16 END=2026-04-01
 backfill:
 	docker compose exec airflow airflow dags backfill \
 	  -s $(START) -e $(END) $(DAG_ID)
