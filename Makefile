@@ -22,7 +22,7 @@ restart: down up
 
 # Build the app image
 build:
-	docker compose build app
+	docker compose build
 
 # View logs
 logs:
@@ -30,7 +30,7 @@ logs:
 
 # Access the app container shell
 shell:
-	docker compose exec app zsh
+	docker compose exec worker bash
 
 # --- Collection & Testing ---
 

@@ -1,10 +1,9 @@
 services:
-  app:
+  worker:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
-    image: crawler-app:latest
-    container_name: crawler_app
+    image: crawler/worker:latest
     depends_on:
       postgres:
         condition: service_healthy
@@ -26,8 +25,10 @@ services:
       retries: 3
 
   airflow:
-    image: apache/airflow:2.10.2-python3.12
-    container_name: airflow
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    image: crawler/airflow:latest
     user: "root"
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
@@ -43,6 +44,8 @@ services:
       - ./dags:/opt/airflow/dags
       - ./app:/opt/airflow/app
       - /var/run/docker.sock:/var/run/docker.sock
+      - .:/home/airflow/workspace
+    working_dir: /home/airflow/workspace
     ports:
       - "8080:8080"
     command: standalone
@@ -57,7 +60,6 @@ services:
 
   postgres:
     image: postgres:13
-    container_name: postgres
     environment:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
@@ -72,7 +74,6 @@ services:
 
   mongodb:
     image: mongo:latest
-    container_name: mongodb
     ports:
       - "27017:27017"
     volumes:
@@ -85,7 +86,6 @@ services:
 
   mongo-express:
     image: mongo-express
-    container_name: mongo-express
     ports:
       - "8081:8081"
     environment:
@@ -103,7 +103,6 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
-    container_name: pgadmin
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@admin.com
       - PGADMIN_DEFAULT_PASSWORD=admin

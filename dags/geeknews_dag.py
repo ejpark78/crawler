@@ -22,7 +22,7 @@ with DAG(
         task_id="collect",
     ).expand(
         bash_command=[
-            f"docker exec crawler_app uv run python -m app.main "
+            f"docker compose exec worker uv run python -m app.main "
             f"--source GeekNews --url {GEEKNEWS_BASE_URL} "
             f"--date {{{{ ds }}}} --page {p}"
             for p in PAGES

@@ -47,7 +47,11 @@ docker run --rm \
    -v /home/ejpark/workspace/crawler:/app \
    --network crawler_default \
    crawler-app:latest \
-   python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-16 --page 1
+   python -m app.main \
+      --source GeekNews \
+      --url https://news.hada.io/ \
+      --date 2026-04-16 \
+      --page 1
 
 
 ```
