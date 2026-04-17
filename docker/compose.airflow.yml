@@ -18,8 +18,7 @@ services:
       - POSTGRES_DB=airflow
       - POSTGRES_HOST=postgres
     volumes:
-      - ..:/app
-      - ../dags:/opt/airflow/dags
+      - ../dags:/opt/airflow/dags:ro
       - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /app
     ports:

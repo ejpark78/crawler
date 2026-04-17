@@ -17,6 +17,9 @@ services:
     stdin_open: true
     networks:
       - airflow-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
 
 networks:
   airflow-net:

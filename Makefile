@@ -32,19 +32,18 @@ restart: down up
 
 # Build the app image
 build:
-	docker compose --profile airflow build
-	docker compose --profile worker build
+	docker compose --profile airflow --profile worker build
 
 # View logs
 logs:
-	docker compose --profile airflow logs -f
+	docker compose --profile airflow -p airflow logs -f
 
 # --- Collection & Testing ---
 
 # Single collection run (Local test)
 # Example: make collect DATE=2026-03-25 PAGE=1
 collect:
-	docker compose --profile worker run \
+	docker compose --profile worker -p airflow run \
 		--rm -e PYTHONPATH=/app worker uv run python -m app.main \
 		--source $(SOURCE) \
 		--url $(URL) \
@@ -53,7 +52,7 @@ collect:
 
 # Run tests inside the app container
 test:
-	docker compose --profile worker exec worker uv run pytest
+	docker compose --profile worker -p airflow exec worker uv run pytest
 
 # --- Airflow ---
 
@@ -79,15 +78,15 @@ reset-pw:
 
 # Access MongoDB shell
 mongo-shell:
-	docker compose --profile worker exec mongodb mongosh crawler_db
+	docker compose --profile worker -p airflow exec mongodb mongosh crawler_db
 
 # Access PostgreSQL shell
 pg-shell:
-	docker compose --profile airflow exec postgres bash
+	docker compose --profile airflow -p airflow exec postgres bash
 # 	docker compose exec postgres psql -U airflow -d airflow
 
 airflow-bash:
-	docker compose --profile airflow exec airflow bash
+	docker compose --profile airflow -p airflow exec airflow bash
 
 worker-bash:
-	docker compose --profile worker exec worker bash
+	docker compose --profile worker -p airflow exec worker bash

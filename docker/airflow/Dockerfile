@@ -21,4 +21,9 @@ COPY --from=compose-downloader /docker-compose /usr/libexec/docker/cli-plugins/d
 # 3. 'docker-compose' 단독 명령어로도 사용할 수 있게 심볼릭 링크 생성
 RUN ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
 
+WORKDIR /app
+
+COPY . .
+RUN cp -r dags /opt/airflow
+
 USER airflow
