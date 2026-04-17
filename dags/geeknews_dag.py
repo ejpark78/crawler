@@ -25,7 +25,7 @@ with DAG(
     ).expand(
         bash_command=[
             "docker compose -f /app/compose.yml --profile worker "
-            "run --rm -e PYTHONPATH=/app -w /app worker "
+            "run --rm worker "
             "uv run python -m app.main "
             f"--source GeekNews --url {GEEKNEWS_BASE_URL} "
             f"--date {{{{ ds }}}} --page {p}"

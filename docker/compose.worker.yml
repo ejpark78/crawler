@@ -1,0 +1,58 @@
+services:
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/app/Dockerfile
+    image: crawler/worker:latest
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+      - POSTGRES_HOST=postgres
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    tty: true
+    stdin_open: true
+    networks:
+      - worker-net
+
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - worker-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    image: mongo-express
+    # ports:
+    #   - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=password123
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - mongodb
+    networks:
+      - worker-net
+
+networks:
+  worker-net:
+    driver: bridge
+
+volumes:
+  mongodb_data:
