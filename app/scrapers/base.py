@@ -28,7 +28,7 @@ class BaseScraper(ABC):
 
     def fetch(self, url: str) -> str:
         """웹 페이지 HTML을 가져오는 인터페이스 (요청 전 랜덤 딜레이 추가)"""
-        delay = random.uniform(1, 3)
+        delay = random.uniform(5, 10)
         logger.info(f"Waiting {delay:.2f}s before fetching {url}...")
         time.sleep(delay)
         return self._do_fetch(url)
