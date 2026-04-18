@@ -73,7 +73,7 @@ collect:
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
 
-# Example: make collect-test DATE=2026-03-25 PAGE=1
+# Example: make collect-test DATE=2026-03-25 PAGE=1 LOG_LEVEL=DEBUG
 collect-docker:
 	docker run --rm -v .:/app -w /app \
 		-e LOG_LEVEL=$(LOG_LEVEL) \
