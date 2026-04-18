@@ -85,8 +85,8 @@ test-docker:
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
 
-unittest:
-	docker compose exec worker uv run pytest
+pytest:
+	docker compose run --rm -v .:/app worker uv run pytest -v -s tests/ 
 
 # Example: make run START_DATE=2026-04-18 END_DATE=2026-04-18
 run:
@@ -106,7 +106,7 @@ run:
 	done
 
 # --- Airflow ---
-# Example: make backfill START_DATE=2026-03-01 END_DATE=2026-03-21
+# Example: make backfill START_DATE=2025-01-01 END_DATE=2025-09-04
 backfill:
 	@current_date=$(END_DATE); \
 	until [[ "$$current_date" < "$(START_DATE)" ]]; do \

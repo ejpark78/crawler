@@ -186,12 +186,12 @@ class BaseScraper(ABC):
         except Exception as e:
             logger.error(f"Failed to save local file: {e}")
 
-    def run(self, db_connection, url: Optional[str] = None, backfill_date: Optional[str] = None, page: Optional[int] = None) -> Tuple[List[GeekNewsList | PytorchKRContents], str]:
+    def run(self, db_connection, backfill_date: Optional[str] = None, page: Optional[int] = None) -> Tuple[List[GeekNewsList | PytorchKRContents], str]:
         """Executes the full collection process (Backfill and Pagination support)."""
         logger.info(f"Starting collection from {self.source_name}...")
         
         # Use provided URL or fallback to scraper's base_url
-        target_url = url if url else getattr(self, 'base_url', None)
+        target_url = getattr(self, 'base_url', None)
         if not target_url:
             raise ValueError(f"No target URL provided for {self.source_name}")
 
