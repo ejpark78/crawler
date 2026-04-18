@@ -35,10 +35,12 @@ docker compose -f /app/compose.yml run -e /app/.env --rm worker \
    uv run python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-01 --page 2
 
 
-
 docker run --rm -v .:/app -w /app \
    crawler/worker:latest \
    uv run python3 -m pytest tests/test_pytorch_kr.py -v -s
+
+
+uv run python scratch/test_parsing.py
 
 ```
 

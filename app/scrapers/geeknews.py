@@ -22,7 +22,7 @@ from bs4 import BeautifulSoup
 from curl_cffi import requests
 
 from app.scrapers.base import BaseScraper
-from app.models import NewsItem, CommentItem
+from app.models import GeekNewsList, GeekNewsContents
 
 logger = logging.getLogger("GeekNewsScraper")
 
@@ -42,7 +42,7 @@ class GeekNewsScraper(BaseScraper):
             logger.error(f"Network error while fetching {url}: {e}")
             return ""
 
-    def scrape(self, date_str: str = "1", db_connection=None) -> List[NewsItem]:
+    def scrape(self, date_str: str = "1", db_connection=None) -> List[GeekNewsList]:
         """Executes the GeekNews scraping process."""
         url = self._get_backfill_url(self.base_url, date_str)
         html = self.fetch(url)
@@ -50,7 +50,7 @@ class GeekNewsScraper(BaseScraper):
             return []
         return self.parse(html, db_connection=db_connection)
 
-    def parse(self, html: str, db_connection=None) -> List[NewsItem]:
+    def parse(self, html: str, db_connection=None) -> List[GeekNewsList]:
         """Parses the GeekNews list page."""
         soup = BeautifulSoup(html, 'html.parser')
         items = []
@@ -86,7 +86,7 @@ class GeekNewsScraper(BaseScraper):
                 logger.info(f"Processing item: {title}...")
                 comments, json_ld_raw, detail_html = self.fetch_comments(url)
 
-                item = NewsItem(
+                item = GeekNewsList(
                     title=title,
                     url=url,
                     content=content,
@@ -103,7 +103,7 @@ class GeekNewsScraper(BaseScraper):
                 continue
         return items
 
-    def fetch_comments(self, url: str) -> Tuple[List[CommentItem], Optional[str], Optional[str]]:
+    def fetch_comments(self, url: str) -> Tuple[List[GeekNewsContents], Optional[str], Optional[str]]:
         """Collects comments from the detail page (JSON-LD primary, HTML fallback)."""
         html = self.fetch(url)
         if not html: return [], None, None
@@ -129,7 +129,7 @@ class GeekNewsScraper(BaseScraper):
                     author_el = row.select_one('.commentinfo a[href^="/@"]')
                     content_el = row.select_one('.comment_contents')
                     if content_el:
-                        comments.append(CommentItem(
+                        comments.append(GeekNewsContents(
                             comment_id=row.get('id', ''),
                             author=author_el.get_text(strip=True) if author_el else "Unknown",
                             content=content_el.get_text(separator="\n", strip=True)
@@ -138,13 +138,13 @@ class GeekNewsScraper(BaseScraper):
             logger.error(f"Comments error at {url}: {e}")
         return comments, json_ld_raw, html
 
-    def _process_json_ld_comment(self, comment_data: dict, comments: List[CommentItem]):
+    def _process_json_ld_comment(self, comment_data: dict, comments: List[GeekNewsContents]):
         """Recursively processes JSON-LD comment structures."""
         if not isinstance(comment_data, dict): return
         text = comment_data.get('text')
         if text:
             url = comment_data.get('url', '')
-            comments.append(CommentItem(
+            comments.append(GeekNewsContents(
                 comment_id=url.split('id=')[-1] if 'id=' in url else '',
                 author=comment_data.get('author', {}).get('name') if isinstance(comment_data.get('author'), dict) else "Unknown",
                 content=text

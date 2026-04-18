@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import List, Optional, Tuple
-from app.models import NewsItem
+from app.models import PytorchKRContents
 from app.scrapers.base import BaseScraper
 
 logger = logging.getLogger("PyTorchKRScraper")
@@ -23,7 +23,7 @@ class PyTorchKRScraper(BaseScraper):
         page_val = page if page else 1
         return f"{base_url}?no_definitions=true&page={page_val}"
 
-    def parse(self, html: str, db_connection=None) -> List[NewsItem]:
+    def parse(self, html: str, db_connection=None) -> List[PytorchKRContents]:
         """Parses JSON or HTML from PyTorchKR."""
         items = []
 
@@ -34,7 +34,7 @@ class PyTorchKRScraper(BaseScraper):
                 data = json.loads(trimmed_html)
                 topics = data.get('topic_list', {}).get('topics', [])
                 for topic in topics:
-                    item = NewsItem(
+                    item = PytorchKRContents(
                         title=topic.get('title'),
                         url=f"https://discuss.pytorch.kr/t/{topic.get('slug')}/{topic.get('id')}",
                         source=self.source_name,
@@ -53,7 +53,7 @@ class PyTorchKRScraper(BaseScraper):
 
         return items
 
-    def parse_content(self, html: str, url: str) -> NewsItem:
+    def parse_content(self, html: str, url: str) -> PytorchKRContents:
         """Parses a single topic page to extract full content and metadata."""
         # This is a simplified implementation for the TDD requirements
         # In production, this would use the scraper's adaptive tools
@@ -71,7 +71,7 @@ class PyTorchKRScraper(BaseScraper):
             end = html.find('</div>', start)
             content = html[start:end].strip()
 
-        return NewsItem(
+        return PytorchKRContents(
             title=title,
             url=url,
             source=self.source_name,

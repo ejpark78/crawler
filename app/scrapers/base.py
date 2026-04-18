@@ -23,7 +23,7 @@ import json
 import os
 import re
 import hashlib
-from app.models import NewsItem
+from app.models import GeekNewsList, PytorchKRContents
 from scrapling import StealthyFetcher
 
 # Logging configuration
@@ -57,12 +57,12 @@ class BaseScraper(ABC):
         pass
 
     @abstractmethod
-    def parse(self, html: str, db_connection=None) -> List[NewsItem]:
-        """Parses HTML and converts it into a list of NewsItem objects."""
+    def parse(self, html: str, db_connection=None) -> List[GeekNewsList | PytorchKRContents]:
+        """Parses HTML and converts it into a list of model objects."""
         pass
 
-    def save(self, item: NewsItem, db_connection, html: Optional[str] = None):
-        """Persists a single NewsItem to MongoDB and local storage."""
+    def save(self, item: GeekNewsList | PytorchKRContents, db_connection, html: Optional[str] = None):
+        """Persists a single item to MongoDB and local storage."""
         # 1. Local file persistence (regardless of DB connection)
         if getattr(self, 'debug_path', None):
             self._save_to_file(item)
@@ -99,10 +99,11 @@ class BaseScraper(ABC):
                 )
 
             # c. Structured JSON-LD storage (comments collection)
-            if item.json_ld_raw:
+            json_ld_raw = getattr(item, 'json_ld_raw', None)
+            if json_ld_raw:
                 jsonld_collection = db[self.jsonld_collection_name]
                 try:
-                    json_data = json.loads(item.json_ld_raw)
+                    json_data = json.loads(json_ld_raw)
                     if isinstance(json_data, list) and len(json_data) > 0:
                         json_data = json_data[0]
 
@@ -121,7 +122,7 @@ class BaseScraper(ABC):
                         {"_id": item.url},
                         {"$set": {
                             "url": item.url,
-                            "json_ld_raw": item.json_ld_raw,
+                            "json_ld_raw": json_ld_raw,
                             "created_at": doc.get("created_at")
                         }},
                         upsert=True
@@ -131,7 +132,7 @@ class BaseScraper(ABC):
         except Exception as e:
             logger.error(f"Failed to save item {item.url}: {e}")
 
-    def _save_to_file(self, item: NewsItem):
+    def _save_to_file(self, item: GeekNewsList | PytorchKRContents):
         """Implements a 3-tier hierarchical local backup system."""
         try:
             source_lower = self.source_name.lower()
@@ -168,23 +169,24 @@ class BaseScraper(ABC):
                     f.write(f"{item_id}.html | {item.url}\n")
 
             # 3. Structured JSON-LD
-            if item.json_ld_raw:
+            json_ld_raw = getattr(item, 'json_ld_raw', None)
+            if json_ld_raw:
                 jsonld_path = os.path.join(jsonld_dir, f"{item_id}.json")
                 try:
-                    json_data = json.loads(item.json_ld_raw)
+                    json_data = json.loads(json_ld_raw)
                     if isinstance(json_data, list) and len(json_data) > 0:
                         json_data = json_data[0]
                     with open(jsonld_path, 'w', encoding='utf-8') as f:
                         json.dump(json_data, f, ensure_ascii=False, indent=2)
                 except Exception:
                     with open(jsonld_path, 'w', encoding='utf-8') as f:
-                        f.write(item.json_ld_raw)
+                        f.write(json_ld_raw)
 
             logger.debug(f"Local file persistence completed for item: {item_id}")
         except Exception as e:
             logger.error(f"Failed to save local file: {e}")
 
-    def run(self, url: str, db_connection, backfill_date: Optional[str] = None, page: Optional[int] = None) -> Tuple[List[NewsItem], str]:
+    def run(self, url: str, db_connection, backfill_date: Optional[str] = None, page: Optional[int] = None) -> Tuple[List[GeekNewsList | PytorchKRContents], str]:
         """Executes the full collection process (Backfill and Pagination support)."""
         logger.info(f"Starting collection from {self.source_name}...")
         if backfill_date:

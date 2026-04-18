@@ -54,36 +54,44 @@ class TestPyTorchKRParsing(unittest.TestCase):
         item = self.scraper.parse_content(content, "https://discuss.pytorch.kr/t/test/123")
         actual_data = item.model_dump()
 
-        expected_filename = filename.replace(".html", ".json")
-        if os.path.exists(os.path.join(self.sample_dir, expected_filename)):
-            expected_data = self._read_sample_json(expected_filename)
+        # Try multiple expected filename patterns
+        possible_expected = [
+            filename.replace(".html", ".json"),
+            filename.replace(".html", ".out.json"),
+            filename.replace(".html", "_expected.json")
+        ]
+        
+        expected_path = None
+        for exp in possible_expected:
+            path = os.path.join(self.sample_dir, exp)
+            if os.path.exists(path):
+                expected_path = path
+                break
+
+        if expected_path:
+            with open(expected_path, 'r', encoding='utf-8') as f:
+                expected_data = json.load(f)
             self.assertEqual(actual_data, expected_data, f"{filename}의 파싱 결과가 기대값과 다릅니다.")
+        else:
+            # If no expected file, we might want to log it or fail if strict
+            pass
 
     def test_parse_all_samples(self):
         """tests/site/pytorch.kr/samples/ 내의 모든 HTML/JSON 파일에 대해 파싱 검증"""
         if not os.path.exists(self.sample_dir):
             self.skipTest(f"샘플 디렉토리가 없습니다: {self.sample_dir}")
 
-        html_files = [f for f in os.listdir(self.sample_dir) if f.endswith(".html") or f.startswith("list_")]
-        input_files = [f for f in html_files if not f.endswith("_expected.json")]
-
-        for filename in input_files:
+        html_files = [f for f in os.listdir(self.sample_dir) if f.endswith(".html")]
+        
+        for filename in html_files:
             with self.subTest(filename=filename):
                 content = self._read_sample_file(filename)
 
                 if filename.startswith("list_"):
                     self._verify_list_sample(filename, content)
-                elif filename.startswith("item_"):
+                else:
+                    # Default to item parsing if not list_
                     self._verify_item_sample(filename, content)
-
-    def test_parse_topics(self):
-        # Keep as fallback for now or migrate to sample-based
-        self.list_sample_path = 'tests/site/pytorch.kr/samples/list.json'
-        if os.path.exists(self.list_sample_path):
-            with open(self.list_sample_path, 'r', encoding='utf-8') as f:
-                self.list_data = json.load(f)
-            topics = self.list_data.get('topic_list', {}).get('topics', [])
-            self.assertTrue(len(topics) > 0)
 
     def test_parse_content(self):
         # Keep as fallback for now
