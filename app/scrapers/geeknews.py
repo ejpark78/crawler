@@ -4,10 +4,11 @@ GeekNewsScraper 모듈
 이 모듈은 GeekNews(https://news.hada.io) 사이트의 뉴스를 수집하는 전용 크롤러를 구현합니다.
 
 주요 특징:
-1. JSON-LD 및 HTML 하이브리드 수집: 상세 페이지의 댓글 데이터를 수집할 때 JSON-LD 구조화 데이터를 우선적으로 활용하며, 데이터가 없거나 불완전할 경우 HTML 스크래핑(Fallback)을 수행합니다.
-2. 중복 방지 로직: 리스트 파싱 과정에서 MongoDB를 조회하여 이미 수집된 항목인 경우 상세 페이지(댓글) 수집을 건너뜁니다.
-3. 다양한 URL 패턴 지원: 페이지 번호 기반 수집 외에도 특정 날짜(YYYY-MM-DD)나 '예전글' 패턴에 대응하는 URL 생성 로직을 포함합니다.
-4. 보안 수집: curl-cffi의 Impersonate 기능을 사용하여 Chrome 브라우저의 요청으로 위장, 봇 차단을 우회합니다.
+1. JSON-LD 및 HTML 하이브리드 수집: 상세 페이지의 댓글 데이터를 수집할 때 JSON-LD 구조화 데이터를 우선적으로 활용하며, Fallback으로 HTML 스크래핑을 수행합니다.
+2. 실시간 증분 저장: 항목별 추출 즉시 'geeknews' 데이터베이스의 pages, html, comments 컬렉션에 분산 저장합니다.
+3. 콘텐츠 추출: 뉴스 항목의 요약 설명(.topicdesc)을 content 필드로 추출하여 저장합니다.
+4. 중복 방지 및 업데이트: 이미 수집된 항목이라도 content 필드가 비어있는 경우 재수집하여 보강합니다.
+5. 보안 수집: curl-cffi의 Impersonate 기능을 사용하여 Chrome 브라우저로 위장, 봇 차단을 우회합니다.
 """
 import json
 import logging

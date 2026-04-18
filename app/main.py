@@ -1,18 +1,17 @@
 """
 Crawler CLI Entrypoint (Main)
 
-이 모듈은 크롤러 프로젝트의 통합 실행 제어기입니다. 명령행 인터페이스(CLI)를 통해 
-다양한 스크래퍼를 구동하고, 수집된 데이터를 MongoDB 또는 로컬 디렉토리에 정해진 규칙에 따라 저장합니다.
+이 모듈은 크롤러 프로젝트의 통합 실행 제어기입니다. CLI를 통해 스크래퍼를 구동하고, 실시간 증분 수집 방식으로 데이터를 저장합니다.
 
 핵심 프로세스:
 1. CLI 인자 파싱 및 실행 환경 설정 (Log Level 등)
-2. 출력 경로(out_path)가 지정된 경우, MongoDB 스키마와 동일한 디렉토리 구조 생성
-3. 표준 출력과 연동된 파일 로깅(crawler.log) 활성화
-4. 등록된 스크래퍼 인스턴스화 및 크롤링 파이프라인 실행
-5. 수집 결과의 다각적 저장 (병합 JSON, 개별 JSON, 원본 HTML 아카이브)
+2. 실시간 증분 저장 (Incremental Save): 수집 중단 시 데이터 손실을 방지하기 위해 각 항목을 추출 즉시 저장합니다.
+3. 3-way Storage: 각 수집 항목을 세 가지 컬렉션(pages, html, comments)에 분산 저장하여 데이터 활용도를 높입니다.
+4. 소스별 DB 격리: --source 인자 값을 기반으로 독립적인 MongoDB 데이터베이스를 자동 생성 및 연결합니다.
+5. 계층적 로컬 아카이빙: --out_path 지정 시 DB 구조와 동일한 3개 디렉토리({source}_pages, {source}_htmls, {source})를 생성하여 파일로 백업합니다.
 
 사용 예시:
-    make collect-docker SOURCE=GeekNews DATE=2026-03-25 LOG_LEVEL=DEBUG
+    make test SOURCE=GeekNews DATE=2026-03-25 PAGE=1 LOG_LEVEL=DEBUG
 """
 import argparse
 import json

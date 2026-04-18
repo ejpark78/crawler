@@ -5,12 +5,13 @@ Crawler Data Models
 수집된 데이터의 유효성 검사, 타입 힌팅 및 직렬화(Serialization)를 담당합니다.
 
 주요 모델:
-- NewsItem: 뉴스 기사 정보를 담는 메인 모델. 제목, URL, 출처, 원문 내용, 수집 시간, 그리고 관련 댓글 리스트를 포함합니다.
+- NewsItem: 뉴스 기사 정보를 담는 메인 모델. 제목, URL, 출처, 요약 내용(content), 수집 시간, 그리고 관련 댓글 리스트를 포함합니다.
 - CommentItem: 개별 댓글 정보를 담는 하위 모델. 작성자, 본문, 고유 ID 등을 관리합니다.
 
 특징:
 1. Pydantic v2 사용: 고성능 데이터 검증 및 JSON 변환을 지원합니다.
-2. 데이터 정규화: 스크래핑된 다양한 형태의 데이터를 일관된 형식으로 변환하여 DB 저장 및 처리를 용이하게 합니다.
+2. 3-way Storage 지원: 원문 HTML(html) 및 JSON-LD 원본(json_ld_raw) 필드를 포함하여 데이터 무결성을 유지합니다.
+3. 데이터 정규화: 스크래핑된 다양한 형태의 데이터를 일관된 형식으로 변환하여 MongoDB 저장 및 처리를 용이하게 합니다.
 """
 
 from pydantic import BaseModel, Field

@@ -4,7 +4,7 @@ Scraper Registry 모듈
 이 모듈은 프로젝트 내에서 사용 가능한 모든 스크래퍼 클래스를 중앙 관리합니다.
 새로운 뉴스 소스를 추가할 때, 해당 스크래퍼 클래스를 구현한 후 이 레지스트리에 등록해야 합니다.
 
-등록된 스크래퍼는 main.py 및 Airflow DAG 등에서 'SOURCE' 인자를 통해 동적으로 인스턴스화되어 사용됩니다.
+등록된 스크래퍼는 'SOURCE' 인자를 통해 동적으로 선택되며, 이는 수집 데이터의 MongoDB 데이터베이스 이름을 결정하는 기준이 됩니다.
 """
 from app.scrapers.geeknews import GeekNewsScraper
 

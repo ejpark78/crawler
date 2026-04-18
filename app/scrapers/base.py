@@ -2,16 +2,16 @@
 BaseScraper 모듈
 
 이 모듈은 모든 뉴스 크롤러의 기반이 되는 추상 기본 클래스(BaseScraper)를 정의합니다.
-새로운 사이트를 추가할 때는 이 클래스를 상속받아 구현해야 합니다.
 
-주요 추상 메서드:
-- _do_fetch(url): 실제 HTTP 요청을 수행하여 HTML을 반환합니다.
-- parse(html, db_connection): HTML을 파싱하여 NewsItem 객체 리스트를 생성합니다.
-
-공통 기능:
-- fetch(url): 요청 전 랜덤 딜레이(5~10초)를 부여하여 봇 탐지를 우회합니다.
-- save(items, db_connection): 수집된 데이터를 MongoDB에 Upsert 방식으로 저장합니다.
-- run(url, db_connection, ...): 전체 크롤링 프로세스(Fetch -> Parse -> Save)를 제어합니다.
+주요 특징:
+1. 실시간 증분 저장 (Incremental Save): 리스트 전체 수집을 기다리지 않고 항목 하나가 추출될 때마다 즉시 저장합니다.
+2. 3-way Persistence: 각 항목을 세 가지 형태로 영구 보장합니다.
+   - pages: 정제된 뉴스 정보 (Metadata, Comments 등)
+   - html: 원문 HTML 데이터 (Raw Data)
+   - comments: 상세 구조화 데이터 (JSON-LD 등)
+3. 다중 스토리지 지원: MongoDB(Upsert 방식)와 로컬 파일 시스템 아카이빙을 동시에 수행합니다.
+4. 소스별 DB 격리: 각 크롤러 소스 이름(예: geeknews)을 데이터베이스 이름으로 사용하여 데이터를 격리 저장합니다.
+5. 봇 탐지 우회: 요청 전 랜덤 딜레이와 StealthyFetcher를 활용하여 안정적인 수집을 보장합니다.
 """
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
