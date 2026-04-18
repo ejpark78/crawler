@@ -11,6 +11,9 @@ class PyTorchKRScraper(BaseScraper):
 
     def __init__(self):
         super().__init__("PyTorchKR")
+        self.db_name = "pytorch_kr"
+        self.collection_name = "list"
+        self.html_collection_name = "contents"
 
     def _do_fetch(self, url: str) -> str:
         # For PyTorchKR, we use StealthyFetcher's internal fetch logic
@@ -59,15 +62,15 @@ class PyTorchKRScraper(BaseScraper):
         # In production, this would use the scraper's adaptive tools
         import re
 
-        title_match = re.search(r'<<titletitle>(.*?)</title>', html)
+        title_match = re.search(r'<title>(.*?)</title>', html)
         title = title_match.group(1) if title_match else "Unknown Title"
 
         # Extract main text - simplified for this version
         # Real implementation would target the .post div
         content = "Full content extraction not implemented in this version"
-        if '<<divdiv class="post" itemprop="text">' in html:
+        if '<div class="post" itemprop="text">' in html:
             # Rough extraction of the first post content
-            start = html.find('<<divdiv class="post" itemprop="text">') + len('<<divdiv class="post" itemprop="text">')
+            start = html.find('<div class="post" itemprop="text">') + len('<div class="post" itemprop="text">')
             end = html.find('</div>', start)
             content = html[start:end].strip()
 
