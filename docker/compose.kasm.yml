@@ -9,21 +9,17 @@ services:
       dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.kasm.rule=PathPrefix(`/kasm`)"
+      - "traefik.http.routers.kasm.rule=Host(`kasm.localhost`)"
       - "traefik.http.routers.kasm.entrypoints=web"
-      - "traefik.http.routers.kasm.middlewares=kasm-stripprefix,kasm-headers"
-      - "traefik.http.middlewares.kasm-stripprefix.stripprefix.prefixes=/kasm"
-      - "traefik.http.middlewares.kasm-headers.headers.customrequestheaders.X-Forwarded-Prefix=/kasm"
       - "traefik.http.services.kasm.loadbalancer.server.port=6901"
       - "traefik.http.services.kasm.loadbalancer.server.scheme=https"
       - "traefik.http.services.kasm.loadbalancer.serversTransport=kasmTransport@file"
     environment:
-      - KASM_USER=${KASM_USER-kasm-user}
-      - VNC_PW=${VNC_PW-kasm2026}
-      - LANG=${LANG-ko_KR.UTF-8}
-      - LANGUAGE=${LANGUAGE-ko_KR.UTF-8}
-      - KASM_VNC_BASE_URL=/kasm
-      - LC_ALL=${LC_ALL-ko_KR.UTF-8}
+      - KASM_USER=${KASM_USER}
+      - VNC_PW=${VNC_PW}
+      - LANG=${LANG}
+      - LANGUAGE=${LANGUAGE}
+      - LC_ALL=${LC_ALL}
       - XMODIFIERS=@im=fcitx
       - GTK_IM_MODULE=fcitx
       - QT_IM_MODULE=fcitx

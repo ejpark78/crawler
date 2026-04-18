@@ -17,7 +17,7 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik_dash.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.traefik_dash.rule=Host(`dash.localhost`)"
       - "traefik.http.routers.traefik_dash.service=api@internal"
       - "traefik.http.routers.traefik_dash.entrypoints=web"
     command:

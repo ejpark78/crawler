@@ -1,0 +1,38 @@
+services:
+  mongodb:
+    networks:
+      - airflow-net
+    image: mongo:latest
+    volumes:
+      - ./volumes/mongodb:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    networks:
+      - airflow-net
+    image: mongo-express
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-express.rule=Host(`me.localhost`)"
+      - "traefik.http.routers.mongo-express.entrypoints=web"
+      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
+    environment:
+      - ME_CONFIG_MONGODB_URL=mongodb://mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
+      - ME_CONFIG_SITE_BASEURL=
+    depends_on:
+      - mongodb
+    healthcheck:
+      test: ["CMD", "sh", "-c", "timeout 5s bash -c ' < /dev/tcp/127.0.0.1/8081'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  airflow-net:
+    external: true

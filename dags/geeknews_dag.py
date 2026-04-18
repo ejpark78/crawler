@@ -1,11 +1,10 @@
+import os
+from datetime import timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.utils.dates import days_ago
-from datetime import timedelta
-
 
 PAGES = list(range(1, 6))
-
 
 with DAG(
     dag_id="geeknews",
@@ -13,8 +12,8 @@ with DAG(
     schedule_interval="@daily",
     catchup=True,
     tags=["Crawler", "GeekNews"],
-    max_active_runs=1,
-    concurrency=1,
+    max_active_runs=int(os.getenv("GEEKNEWS_MAX_ACTIVE_RUNS", 1)),
+    concurrency=int(os.getenv("GEEKNEWS_CONCURRENCY", 1)),
 ) as dag:
     dag.doc_str = "GeekNews 뉴스 수집 DAG (Dynamic Task Mapping)"
 

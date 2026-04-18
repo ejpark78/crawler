@@ -7,6 +7,11 @@ services:
     user: "root"
     networks:
       - airflow-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.airflow.rule=Host(`af.localhost`)"
+      - "traefik.http.routers.airflow.entrypoints=web"
+      - "traefik.http.services.airflow.loadbalancer.server.port=8080"
     environment:
       - AIRFLOW__CORE__EXECUTOR=${AIRFLOW__CORE__EXECUTOR}
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
@@ -18,11 +23,8 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_HOST=${POSTGRES_HOST}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.airflow.rule=PathPrefix(`/af`)"
-      - "traefik.http.routers.airflow.entrypoints=web"
-      - "traefik.http.services.airflow.loadbalancer.server.port=8080"
+      - GEEKNEWS_MAX_ACTIVE_RUNS=${GEEKNEWS_MAX_ACTIVE_RUNS-1}
+      - GEEKNEWS_CONCURRENCY=${GEEKNEWS_CONCURRENCY-1}
     volumes:
       - ..:/app
       - ../dags:/opt/airflow/dags:ro
@@ -34,7 +36,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/af/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -61,11 +63,11 @@ services:
     image: dpage/pgadmin4
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pgadmin.rule=PathPrefix(`/pg`)"
+      - "traefik.http.routers.pgadmin.rule=Host(`pg.localhost`)"
       - "traefik.http.routers.pgadmin.entrypoints=web"
       - "traefik.http.routers.pgadmin.middlewares=pgadmin-stripprefix,pgadmin-scriptname"
-      - "traefik.http.middlewares.pgadmin-stripprefix.stripprefix.prefixes=/pg"
-      - "traefik.http.middlewares.pgadmin-scriptname.headers.customrequestheaders.X-Script-Name=/pg"
+      - "traefik.http.middlewares.pgadmin-stripprefix.stripprefix.prefixes="
+      - "traefik.http.middlewares.pgadmin-scriptname.headers.customrequestheaders.X-Script-Name="
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
@@ -75,40 +77,6 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  mongodb:
-    networks:
-      - airflow-net
-    image: mongo:latest
-    volumes:
-      - ./volumes/mongodb:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  mongo-express:
-    networks:
-      - airflow-net
-    image: mongo-express
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mongo-express.rule=PathPrefix(`/me`)"
-      - "traefik.http.routers.mongo-express.entrypoints=web"
-      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
-    environment:
-      - ME_CONFIG_MONGODB_URL=mongodb://mongodb:27017/
-      - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
-      - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
-      - ME_CONFIG_SITE_BASEURL=/me/
-    depends_on:
-      - mongodb
-    healthcheck:
-      test: ["CMD", "sh", "-c", "wget --spider -q http://$$ME_CONFIG_BASICAUTH_USERNAME:$$ME_CONFIG_BASICAUTH_PASSWORD@127.0.0.1:8081/me/"]
       interval: 30s
       timeout: 10s
       retries: 3
