@@ -3,6 +3,7 @@ import logging
 from typing import List, Optional, Tuple
 from app.models import PytorchKRContents
 from app.scrapers.base import BaseScraper
+import re
 
 logger = logging.getLogger("PyTorchKRScraper")
 
@@ -12,8 +13,9 @@ class PyTorchKRScraper(BaseScraper):
     def __init__(self):
         super().__init__("PyTorchKR")
         self.db_name = "pytorch_kr"
-        self.collection_name = "list"
-        self.html_collection_name = "contents"
+        self.collection_list = "list"
+        self.collection_contents = "contents"
+        self.base_url = "https://discuss.pytorch.kr/latest.json"
 
     def _do_fetch(self, url: str) -> str:
         # For PyTorchKR, we use StealthyFetcher's internal fetch logic
@@ -23,8 +25,9 @@ class PyTorchKRScraper(BaseScraper):
         # PyTorchKR's JSON API uses page parameters.
         # Date-based filtering is usually done on the client side or via search.
         # For the purpose of this implementation, we support page-based pagination.
+        url = base_url if base_url else self.base_url
         page_val = page if page else 1
-        return f"{base_url}?no_definitions=true&page={page_val}"
+        return f"{url}?no_definitions=true&page={page_val}"
 
     def parse(self, html: str, db_connection=None) -> List[PytorchKRContents]:
         """Parses JSON or HTML from PyTorchKR."""
@@ -60,7 +63,6 @@ class PyTorchKRScraper(BaseScraper):
         """Parses a single topic page to extract full content and metadata."""
         # This is a simplified implementation for the TDD requirements
         # In production, this would use the scraper's adaptive tools
-        import re
 
         title_match = re.search(r'<title>(.*?)</title>', html)
         title = title_match.group(1) if title_match else "Unknown Title"

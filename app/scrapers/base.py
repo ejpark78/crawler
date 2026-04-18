@@ -39,9 +39,9 @@ class BaseScraper(ABC):
     def __init__(self, source_name: str):
         self.source_name = source_name
         self.db_name = source_name.lower()
-        self.collection_name = "pages"
-        self.html_collection_name = "html"
-        self.jsonld_collection_name = "comments"
+        self.collection_pages = "pages"
+        self.collection_html = "html"
+        self.collection_contents = "comments"
         self.crawler = StealthyFetcher()
 
     def fetch(self, url: str) -> str:
@@ -76,7 +76,7 @@ class BaseScraper(ABC):
             db = db_connection[self.db_name]
 
             # a. Page metadata (Upsert by URL)
-            collection = db[self.collection_name]
+            collection = db[self.collection_pages]
             doc = item.model_dump(mode='json')
             doc.pop("json_ld_raw", None)
             collection.update_one(
@@ -87,7 +87,7 @@ class BaseScraper(ABC):
 
             # b. Raw HTML storage
             if html:
-                html_collection = db[self.html_collection_name]
+                html_collection = db[self.collection_html]
                 html_collection.update_one(
                     {"_id": item.url},
                     {"$set": {
@@ -101,13 +101,13 @@ class BaseScraper(ABC):
             # c. Structured JSON-LD storage (comments collection)
             json_ld_raw = getattr(item, 'json_ld_raw', None)
             if json_ld_raw:
-                jsonld_collection = db[self.jsonld_collection_name]
+                collection_contents = db[self.collection_contents]
                 try:
                     json_data = json.loads(json_ld_raw)
                     if isinstance(json_data, list) and len(json_data) > 0:
                         json_data = json_data[0]
 
-                    jsonld_collection.update_one(
+                    collection_contents.update_one(
                         {"_id": item.url},
                         {"$set": {
                             "url": item.url,
@@ -118,7 +118,7 @@ class BaseScraper(ABC):
                     )
                 except Exception as e:
                     # Fallback: save as raw string if JSON parsing fails
-                    jsonld_collection.update_one(
+                    collection_contents.update_one(
                         {"_id": item.url},
                         {"$set": {
                             "url": item.url,
@@ -139,9 +139,9 @@ class BaseScraper(ABC):
             base_dir = os.path.join(self.debug_path, source_lower)
 
             # Directory setup
-            pages_dir = os.path.join(base_dir, f"{source_lower}_pages")
-            htmls_dir = os.path.join(base_dir, f"{source_lower}_htmls")
-            jsonld_dir = os.path.join(base_dir, source_lower)
+            pages_dir = os.path.join(base_dir, "pages")
+            htmls_dir = os.path.join(base_dir, "htmls")
+            jsonld_dir = os.path.join(base_dir, "comments")
 
             for d in [pages_dir, htmls_dir, jsonld_dir]:
                 os.makedirs(d, exist_ok=True)
@@ -186,14 +186,20 @@ class BaseScraper(ABC):
         except Exception as e:
             logger.error(f"Failed to save local file: {e}")
 
-    def run(self, url: str, db_connection, backfill_date: Optional[str] = None, page: Optional[int] = None) -> Tuple[List[GeekNewsList | PytorchKRContents], str]:
+    def run(self, db_connection, url: Optional[str] = None, backfill_date: Optional[str] = None, page: Optional[int] = None) -> Tuple[List[GeekNewsList | PytorchKRContents], str]:
         """Executes the full collection process (Backfill and Pagination support)."""
         logger.info(f"Starting collection from {self.source_name}...")
+        
+        # Use provided URL or fallback to scraper's base_url
+        target_url = url if url else getattr(self, 'base_url', None)
+        if not target_url:
+            raise ValueError(f"No target URL provided for {self.source_name}")
+
         if backfill_date:
             logger.info(f"Backfilling data for date: {backfill_date}, page: {page}")
-            url = self._get_backfill_url(url, backfill_date, page=page)
+            target_url = self._get_backfill_url(target_url, backfill_date, page=page)
 
-        html = self.fetch(url)
+        html = self.fetch(target_url)
         items = self.parse(html, db_connection=db_connection)
         logger.info(f"Successfully collected {len(items)} items from {self.source_name}.")
         return items, html

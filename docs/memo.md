@@ -32,7 +32,7 @@
 
 ```
 docker compose -f /app/compose.yml run -e /app/.env --rm worker \
-   uv run python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-01 --page 2
+   uv run python -m app.main --source GeekNews --date 2026-04-01 --page 2
 
 
 docker run --rm -v .:/app -w /app \

@@ -5,7 +5,6 @@
 #
 # [주요 변수 가이드]
 #   SOURCE   - 수집 대상 소스 이름 (SCRAPER_REGISTRY에 등록된 값, 기본: GeekNews)
-#   URL      - 수집 대상 기본 URL (기본: https://news.hada.io/)
 #   DATE     - 백필 및 과거 데이터 조회 시 기준 날짜 (YYYY-MM-DD)
 #   PAGE     - 수집할 페이지 번호 (기본: 1)
 #   OUT_PATH - 수집된 결과를 JSON 파일로 저장할 경로 (기본: volumes/ 하위)
@@ -21,7 +20,6 @@ SHELL := /bin/bash
 
 # Variables
 SOURCE ?= GeekNews
-URL ?= https://news.hada.io/
 DATE ?= $(shell date +%Y-%m-%d)
 PAGE ?= 1
 START_DATE ?= 2026-04-11
@@ -72,19 +70,17 @@ test:
 	docker compose run -e LOG_LEVEL=$(LOG_LEVEL)\
 		--rm worker uv run python -m app.main \
 		--source $(SOURCE) \
-		--url $(URL) \
 		--date $(DATE) \
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
 
-# Example: make test-docker DATE=2026-03-25 PAGE=1 LOG_LEVEL=DEBUG
+# Example: make test-docker DATE=2026-04-18 PAGE=1 LOG_LEVEL=DEBUG
 test-docker:
 	docker run --rm -v .:/app -w /app \
 		-e LOG_LEVEL=$(LOG_LEVEL) \
 		crawler/worker:latest \
 		uv run python -m app.main \
 		--source $(SOURCE) \
-		--url $(URL) \
 		--date $(DATE) \
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
@@ -92,7 +88,7 @@ test-docker:
 unittest:
 	docker compose exec worker uv run pytest
 
-# Example: make run START_DATE=2026-03-21 END_DATE=2026-03-21
+# Example: make run START_DATE=2026-04-18 END_DATE=2026-04-18
 run:
 	@current_date=$(START_DATE); \
 	until [[ "$$current_date" > "$(END_DATE)" ]]; do \
@@ -103,7 +99,6 @@ run:
 			docker compose -f docker/compose.worker.yml run --rm worker \
 				uv run python -m app.main \
 				--source $(SOURCE) \
-				--url $(URL) \
 				--date $$current_date \
 				--page $$page; \
 		done; \

@@ -36,14 +36,12 @@ def main():
 
     Args:
         --source (str): Source name registered in SCRAPER_REGISTRY (Required).
-        --url (str): Base URL to start scraping (Required).
         --date (str): Target date for backfilling (YYYY-MM-DD).
         --page (int): Target page number.
         --out_path (str): Local root directory for structured output.
     """
     parser = argparse.ArgumentParser(description="CLI Wrapper for Advanced Scrapers")
     parser.add_argument("--source", required=True, help="Source name from registry (e.g., GeekNews)")
-    parser.add_argument("--url", required=True, help="Base URL to start scraping")
     parser.add_argument("--date", help="Target date for backfilling (YYYY-MM-DD)")
     parser.add_argument("--page", type=int, help="Target page number")
     parser.add_argument("--out_path", help="Local directory path to save structured output")
@@ -93,7 +91,6 @@ def main():
     try:
         # Execution
         scraper.run(
-            url=args.url,
             db_connection=db_conn,
             backfill_date=args.date,
             page=args.page
