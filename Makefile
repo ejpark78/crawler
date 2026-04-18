@@ -92,8 +92,8 @@ test-docker:
 unittest:
 	docker compose exec worker uv run pytest
 
-# Example: make backfill-data START_DATE=2026-04-01 END_DATE=2026-04-10
-backfill-data:
+# Example: make run START_DATE=2026-03-21 END_DATE=2026-03-21
+run:
 	@current_date=$(START_DATE); \
 	until [[ "$$current_date" > "$(END_DATE)" ]]; do \
 		echo "------------------------------------------"; \
@@ -111,13 +111,7 @@ backfill-data:
 	done
 
 # --- Airflow ---
-# Example: make backfill START=2023-04-01 END=2026-04-10
-# Example: make backfill START=2026-03-01 END=2026-03-31
-backfill-rg:
-	docker compose exec airflow airflow dags backfill \
-	  -s $(START) -e $(END) $(DAG_ID)
-
-# Example: make backfill-af START_DATE=2026-03-01 END_DATE=2026-03-31
+# Example: make backfill START_DATE=2026-03-01 END_DATE=2026-03-21
 backfill:
 	@current_date=$(END_DATE); \
 	until [[ "$$current_date" < "$(START_DATE)" ]]; do \
@@ -128,10 +122,16 @@ backfill:
 		current_date=$$(date -I -d "$$current_date - 1 day"); \
 	done
 
-# Example: make clear START=2026-04-01 END=2026-04-17
+# Example: make backfill START_DATE=2023-04-01 END_DATE=2026-04-10
+# Example: make backfill START_DATE=2026-03-01 END_DATE=2026-03-31
+backfill-rg:
+	docker compose exec airflow airflow dags backfill \
+	  -s $(START_DATE) -e $(END_DATE) $(DAG_ID)
+
+# Example: make clear START_DATE=2026-04-01 END_DATE=2026-04-17
 clear:
 	docker compose exec -T airflow airflow tasks clear -y \
-	  -s $(START) -e $(END) $(DAG_ID)
+	  -s $(START_DATE) -e $(END_DATE) $(DAG_ID)
 
 reset-pw:
 	docker compose exec airflow \
