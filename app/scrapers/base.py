@@ -1,15 +1,26 @@
+"""
+BaseScraper 모듈
+
+이 모듈은 모든 뉴스 크롤러의 기반이 되는 추상 기본 클래스(BaseScraper)를 정의합니다.
+새로운 사이트를 추가할 때는 이 클래스를 상속받아 구현해야 합니다.
+
+주요 추상 메서드:
+- _do_fetch(url): 실제 HTTP 요청을 수행하여 HTML을 반환합니다.
+- parse(html, db_connection): HTML을 파싱하여 NewsItem 객체 리스트를 생성합니다.
+
+공통 기능:
+- fetch(url): 요청 전 랜덤 딜레이(5~10초)를 부여하여 봇 탐지를 우회합니다.
+- save(items, db_connection): 수집된 데이터를 MongoDB에 Upsert 방식으로 저장합니다.
+- run(url, db_connection, ...): 전체 크롤링 프로세스(Fetch -> Parse -> Save)를 제어합니다.
+"""
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import time
 import random
 import logging
 from app.models import NewsItem
 from scrapling import StealthyFetcher
 from bs4 import BeautifulSoup
-from curl_cffi import requests
-import json
-import requests
-import os
 
 # 로깅 설정
 logging.basicConfig(
@@ -39,14 +50,22 @@ class BaseScraper(ABC):
         pass
 
     @abstractmethod
-    def parse(self, html: str) -> List[NewsItem]:
+    def parse(self, html: str, db_connection=None) -> List[NewsItem]:
         """HTML을 파싱하여 NewsItem 리스트로 변환하는 인터페이스"""
         pass
 
     def save(self, items: List[NewsItem], db_connection, html: Optional[str] = None):
         """MongoDB에 데이터 저장 (Upsert 방식)"""
-        db = db_connection["crawler_db"]
-        collection = db[self.collection_name]
+        if db_connection is None:
+            logger.warning("Database connection is missing. Skipping database save.")
+            return
+
+        try:
+            db = db_connection["crawler_db"]
+            collection = db[self.collection_name]
+        except Exception as e:
+            logger.error(f"Failed to access database: {e}")
+            return
 
         saved_count = 0
         for item in items:
@@ -67,70 +86,7 @@ class BaseScraper(ABC):
 
         logger.info(f"Successfully saved {saved_count}/{len(items)} items to {self.collection_name} collection.")
 
-    def save_to_json(self, items: List[NewsItem], file_path: str):
-        """수집된 데이터를 JSON 파일로 저장 (comments 필드는 제외하여 저장)"""
-        data = []
-        for item in items:
-            item_dict = item.model_dump()
-            # comments 필드는 별도 파일(예: comment_sample.json)로 관리하므로 메인 JSON에서는 제외
-            item_dict.pop('comments', None)
-            data.append(item_dict)
-
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4, default=str)
-        print(f"Saved {len(items)} items (excluding comments) to {file_path}")
-
-    def fetch_simple(self, url: str) -> str:
-        """브라우저 없이 HTTP 요청만으로 HTML을 가져오는 가벼운 메서드 (Fallback용)"""
-        print(f"Using fallback simple fetch for {url}...")
-        response = requests.get(url, headers=getattr(self, 'headers', {}), timeout=10)
-        response.raise_for_status()
-        return response.text
-
-    def collect_sample_html(self, url: str, file_path: str):
-        """테스트를 위한 샘플 HTML 수집 및 저장"""
-        print(f"Collecting sample HTML from {url}...")
-        try:
-            html = self.fetch(url)
-        except Exception as e:
-            print(f"Stealth fetch failed: {e}. Trying fallback simple fetch...")
-            try:
-                html = self.fetch_simple(url)
-            except Exception as e2:
-                print(f"Simple fetch also failed: {e2}")
-                return
-
-        # Ensure html is a string and not empty
-        html_content = str(html) if html is not None else ""
-        content_len = len(html_content)
-        print(f"Fetched HTML length: {content_len} characters")
-
-        # 1차 검증: 최소 길이 및 HTML 태그 확인
-        if content_len < 500 or "<html" not in html_content.lower():
-            print(f"Warning: Fetched HTML is too short or invalid for {url}")
-            return
-
-        # 2차 검증: 실제 데이터(뉴스 항목)가 존재하는지 확인
-        # 자식 클래스의 parse 메서드를 활용하여 데이터 추출 시도
-        try:
-            items = self.parse(html_content)
-            if not items:
-                print(f"Warning: No news items found in the HTML for {url}. Likely a bot-block page.")
-                return
-            print(f"Verified: {len(items)} news items found. This is a valid sample.")
-        except Exception as e:
-            print(f"Verification failed during parsing: {e}")
-            return
-
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-            f.flush()
-            os.fsync(f.fileno())
-
-        os.chmod(file_path, 0o666)
-        print(f"Sample HTML successfully saved to {file_path} ({content_len} bytes)")
-
-    def run(self, url: str, db_connection, backfill_date: Optional[str] = None, page: Optional[int] = None):
+    def run(self, url: str, db_connection, backfill_date: Optional[str] = None, page: Optional[int] = None) -> Tuple[List[NewsItem], str]:
         """전체 수집 프로세스 실행 (Backfill 및 페이지네이션 지원)"""
         print(f"Starting collection from {self.source_name}...")
         if backfill_date:
@@ -138,11 +94,11 @@ class BaseScraper(ABC):
             url = self._get_backfill_url(url, backfill_date, page=page)
 
         html = self.fetch(url)
-        items = self.parse(html)
+        items = self.parse(html, db_connection=db_connection)
         self.save(items, db_connection, html)
         print(f"Successfully collected {len(items)} items from {self.source_name}.")
+        return items, html
 
     def _get_backfill_url(self, base_url: str, date_str: str, page: Optional[int] = None) -> str:
         """날짜 및 페이지별 백필 URL 생성 (자식 클래스에서 오버라이드)"""
         return base_url
-

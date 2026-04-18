@@ -1,3 +1,17 @@
+"""
+GeekNews 뉴스 수집 DAG
+
+이 모듈은 GeekNews 사이트의 데이터를 정기적으로 수집하기 위한 Airflow DAG을 정의합니다.
+
+주요 기능:
+1. Dynamic Task Mapping: PAGES 리스트(1~5페이지)에 정의된 각 페이지를 병렬로 수집하도록 태스크를 동적으로 생성합니다.
+2. Docker Operator: 수집 로직은 독립된 워커 컨테이너(worker)에서 실행되어 환경 간 격리를 보장합니다.
+3. Backfill 지원: 'catchup=True' 설정을 통해 과거 누락된 날짜의 데이터를 소급 수집할 수 있습니다.
+
+환경 변수:
+- GEEKNEWS_MAX_ACTIVE_RUNS: 동시 실행 가능한 DAG Run의 최대 개수 (기본값: 1)
+- GEEKNEWS_CONCURRENCY: DAG 내에서 동시 실행 가능한 태스크의 최대 개수 (기본값: 1)
+"""
 import os
 from datetime import timedelta
 from airflow import DAG
