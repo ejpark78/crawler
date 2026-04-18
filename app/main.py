@@ -63,7 +63,7 @@ def main():
         if scraper_cls:
             # 임시 인스턴스 생성을 통해 collection_name 확인
             temp_scraper = scraper_cls()
-            target_dir = os.path.join(args.out_path, args.source, temp_scraper.collection_name)
+            target_dir = args.out_path
             os.makedirs(target_dir, exist_ok=True)
             
             # 파일 핸들러 추가: 모든 로그를 out_path/crawler.log에도 기록
@@ -113,29 +113,6 @@ def main():
             page=args.page
         )
 
-        # 수집된 데이터를 로컬 파일 시스템에 구조화하여 저장
-        if target_dir:
-            try:
-                # 1. 통합 결과 파일 저장
-                final_path = os.path.join(target_dir, "final_results.json")
-                data_to_save = [item.model_dump(mode='json') for item in items]
-                with open(final_path, 'w', encoding='utf-8') as f:
-                    json.dump(data_to_save, f, ensure_ascii=False, indent=2)
-                
-                # 2. 개별 뉴스 항목 파일 저장 (ID 기반 파일명)
-                items_dir = os.path.join(target_dir, "items")
-                os.makedirs(items_dir, exist_ok=True)
-                for i, item in enumerate(items):
-                    # URL에서 고유 ID 추출 시도, 실패 시 인덱스 사용
-                    item_id = item.url.split('id=')[-1] if 'id=' in item.url else f"item_{i:03d}"
-                    item_path = os.path.join(items_dir, f"{item_id}.json")
-                    with open(item_path, 'w', encoding='utf-8') as f:
-                        json.dump(item.model_dump(mode='json'), f, ensure_ascii=False, indent=2)
-                
-                logger.info(f"Data persistence successful. Files stored in: {target_dir}")
-                
-            except Exception as e:
-                logger.error(f"Failed to persist data to file system: {e}")
 
     finally:
         # 리소스 정리

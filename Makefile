@@ -63,9 +63,9 @@ stats:
 	docker stats
 
 # --- Collection & Testing ---
-# Example: make collect DATE=2026-03-25 PAGE=1
-collect:
-	docker compose run \
+# Example: make test DATE=2026-03-25 PAGE=1 LOG_LEVEL=DEBUG
+test:
+	docker compose run -e LOG_LEVEL=$(LOG_LEVEL)\
 		--rm worker uv run python -m app.main \
 		--source $(SOURCE) \
 		--url $(URL) \
@@ -73,8 +73,8 @@ collect:
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
 
-# Example: make collect-test DATE=2026-03-25 PAGE=1 LOG_LEVEL=DEBUG
-collect-docker:
+# Example: make test-docker DATE=2026-03-25 PAGE=1 LOG_LEVEL=DEBUG
+test-docker:
 	docker run --rm -v .:/app -w /app \
 		-e LOG_LEVEL=$(LOG_LEVEL) \
 		crawler/worker:latest \
@@ -85,7 +85,7 @@ collect-docker:
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
 
-test:
+unittest:
 	docker compose exec worker uv run pytest
 
 # --- Airflow ---
