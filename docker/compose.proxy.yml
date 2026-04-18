@@ -1,6 +1,8 @@
 services:
   proxy:
-    image: traefik:v3.6
+    build:
+      context: ./traefik
+      dockerfile: Dockerfile
     restart: always
     ports:
       - "80:80"
@@ -24,6 +26,8 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--ping=true"
+      - "--providers.file.filename=/etc/traefik/dynamic_conf.yml"
+      - "--providers.file.watch=true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:

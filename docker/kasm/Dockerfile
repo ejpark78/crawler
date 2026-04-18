@@ -7,7 +7,7 @@ ENV UV_INSTALL_DIR=/usr/local/bin \
     PASSWORD_STORE=basic \
     XMODIFIERS=@im=fcitx \
     GTK_IM_MODULE=fcitx \
-    QT_IM_MODULE=fcitx
+    QT_IM_MODULE=fcitx 
 
 # 2. Package & Repository Setup
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh \
     locales \
     language-pack-ko \
+    language-pack-en \
     fonts-nanum \
     fcitx \
     fcitx-hangul \
@@ -56,8 +57,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && wget -q https://compass.mongodb.com/api/v2/download/latest/compass/stable/linux_deb -O mongodb-compass.deb \
     && apt-get install -y --no-install-recommends ./mongodb-compass.deb \
     && rm mongodb-compass.deb \
-    # 2.5 Setup Korean Locale
-    && locale-gen ko_KR.UTF-8 \
+    # 2.5 Setup Locales (Korean & English)
+    && locale-gen ko_KR.UTF-8 en_US.UTF-8 \
     && update-locale LANG=ko_KR.UTF-8 \
     # 2.6 Cleanup
     && apt-get clean \
