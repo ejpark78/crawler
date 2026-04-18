@@ -1,14 +1,18 @@
 """
-GeekNewsScraper 모듈
+GeekNewsScraper Module
 
-이 모듈은 GeekNews(https://news.hada.io) 사이트의 뉴스를 수집하는 전용 크롤러를 구현합니다.
+Implements a specialized crawler for GeekNews (https://news.hada.io).
 
-주요 특징:
-1. JSON-LD 및 HTML 하이브리드 수집: 상세 페이지의 댓글 데이터를 수집할 때 JSON-LD 구조화 데이터를 우선적으로 활용하며, Fallback으로 HTML 스크래핑을 수행합니다.
-2. 실시간 증분 저장: 항목별 추출 즉시 'geeknews' 데이터베이스의 pages, html, comments 컬렉션에 분산 저장합니다.
-3. 콘텐츠 추출: 뉴스 항목의 요약 설명(.topicdesc)을 content 필드로 추출하여 저장합니다.
-4. 중복 방지 및 업데이트: 이미 수집된 항목이라도 content 필드가 비어있는 경우 재수집하여 보강합니다.
-5. 보안 수집: curl-cffi의 Impersonate 기능을 사용하여 Chrome 브라우저로 위장, 봇 차단을 우회합니다.
+Key Features:
+1. Hybrid Collection: Uses JSON-LD as the primary source for comment data,
+   falling back to HTML scraping if necessary.
+2. Incremental Persistence: Immediately saves items to 'geeknews' DB collections
+   (pages, html, comments) upon extraction.
+3. Content Extraction: Captures the summary description (.topicdesc) into the 'content' field.
+4. Duplicate Prevention: Skips previously collected items unless the 'content' field
+   needs to be populated/updated.
+5. Stealth Collection: Employs curl-cffi's Impersonate feature (Chrome) to
+   bypass bot detection.
 """
 import json
 import logging
@@ -28,7 +32,7 @@ class GeekNewsScraper(BaseScraper):
         self.base_url = "https://news.hada.io"
 
     def _do_fetch(self, url: str) -> str:
-        """실제 네트워크 요청 수행 (curl-cffi 활용)"""
+        """Performs network requests using curl-cffi with Chrome impersonation."""
         logger.info(f"Fetching {url} using curl-cffi (Impersonating Chrome)...")
         try:
             response = requests.get(url, impersonate="chrome", timeout=30)
@@ -39,7 +43,7 @@ class GeekNewsScraper(BaseScraper):
             return ""
 
     def scrape(self, date_str: str = "1", db_connection=None) -> List[NewsItem]:
-        """GeekNews를 크롤링합니다."""
+        """Executes the GeekNews scraping process."""
         url = self._get_backfill_url(self.base_url, date_str)
         html = self.fetch(url)
         if not html:
@@ -47,10 +51,10 @@ class GeekNewsScraper(BaseScraper):
         return self.parse(html, db_connection=db_connection)
 
     def parse(self, html: str, db_connection=None) -> List[NewsItem]:
-        """GeekNews 리스트 페이지를 파싱합니다."""
+        """Parses the GeekNews list page."""
         soup = BeautifulSoup(html, 'html.parser')
         items = []
-        
+
         collection = None
         if db_connection is not None:
             collection = db_connection[self.db_name][self.collection_name]
@@ -60,23 +64,21 @@ class GeekNewsScraper(BaseScraper):
             try:
                 title_element = row.select_one('.topictitle a')
                 if not title_element: continue
-                
+
                 title = title_element.get_text(strip=True)
                 url = title_element.get('href', '')
                 if not (title and url): continue
 
                 if url and not url.startswith('http'):
-                    # /로 시작하든 아니든 절대 경로로 변환
                     url = f"https://news.hada.io/{url.lstrip('/')}"
-                
-                # 정보 추출
+
                 desc_element = row.select_one('.topicdesc')
                 content = desc_element.get_text(strip=True) if desc_element else ""
-                
-                # 중복 체크
+
+                # Duplicate Check
                 existing_item = collection.find_one({"_id": url}) if collection is not None else None
-                
-                # 이미 수집된 항목이고 content가 비어있지 않으면 스킵
+
+                # Skip if already collected and content is not empty
                 if existing_item and existing_item.get('content'):
                     logger.info(f"Skip duplicate: {title}")
                     continue
@@ -93,7 +95,7 @@ class GeekNewsScraper(BaseScraper):
                     json_ld_raw=json_ld_raw,
                     html=detail_html
                 )
-                # 즉시 저장 (DB 및 로컬 파일)
+                # Immediate persistence (DB & Local)
                 self.save(item, db_connection, detail_html)
                 items.append(item)
             except Exception as e:
@@ -102,15 +104,16 @@ class GeekNewsScraper(BaseScraper):
         return items
 
     def fetch_comments(self, url: str) -> Tuple[List[CommentItem], Optional[str], Optional[str]]:
-        """상세 페이지에서 댓글 수집 (JSON-LD 우선, HTML Fallback)"""
+        """Collects comments from the detail page (JSON-LD primary, HTML fallback)."""
         html = self.fetch(url)
         if not html: return [], None, None
-        
+
         soup = BeautifulSoup(html, 'html.parser')
         comments = []
-        
+        json_ld_raw = None
+
         try:
-            # 1. JSON-LD 시도
+            # 1. JSON-LD Strategy
             json_ld_script = soup.find('script', type='application/ld+json')
             if json_ld_script:
                 json_ld_raw = json_ld_script.string
@@ -120,7 +123,7 @@ class GeekNewsScraper(BaseScraper):
                 for comment_data in comment_data_list:
                     self._process_json_ld_comment(comment_data, comments)
 
-            # 2. HTML Fallback
+            # 2. HTML Fallback Strategy
             if not comments:
                 for row in soup.select('div.comment_row'):
                     author_el = row.select_one('.commentinfo a[href^="/@"]')
@@ -133,9 +136,10 @@ class GeekNewsScraper(BaseScraper):
                         ))
         except Exception as e:
             logger.error(f"Comments error at {url}: {e}")
-        return comments, json_ld_raw if 'json_ld_raw' in locals() else None, html
+        return comments, json_ld_raw, html
 
     def _process_json_ld_comment(self, comment_data: dict, comments: List[CommentItem]):
+        """Recursively processes JSON-LD comment structures."""
         if not isinstance(comment_data, dict): return
         text = comment_data.get('text')
         if text:
@@ -151,6 +155,7 @@ class GeekNewsScraper(BaseScraper):
             self._process_json_ld_comment(child, comments)
 
     def _get_backfill_url(self, base_url: str, date_str: str, page: int = None) -> str:
+        """Constructs the target URL for backfilling based on date/page patterns."""
         base = base_url.rstrip('/')
         if date_str == 'comments':
             return f"{base}/comments?page={page}" if page else f"{base}/comments"

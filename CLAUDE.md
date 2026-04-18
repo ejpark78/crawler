@@ -7,13 +7,14 @@
 본 프로젝트는 환경 일관성을 위해 Docker Compose 컨테이너 내부에서 `uv run`을 통해 모든 프로세스를 실행합니다.
 
 ### 1. 개발 및 실행 명령어
-* **전체 서비스 구동**: `docker compose up --build`
-* **컨테이너 내 테스트 실행 (TDD)**: `docker compose exec app uv run pytest`
-* **샘플 데이터 수집**: `docker compose exec app uv run python -m app.collect_samples`
-* **데이터 수집 테스트 (Local)**: `make collect`
-* **데이터 백필/클리어 (Airflow)**: `make backfill`, `make clear`
-* **DB 쉘 접속**: `make mongo-shell`, `make pg-shell`
-* **코드 포맷팅**: `docker compose exec app uv run isort . && docker compose exec app uv run black .`
+* **전체 서비스 구동**: `docker compose up -d`
+* **컨테이너 내 테스트 실행 (TDD)**: `make unittest`
+* **데이터 수집 테스트 (Local)**: `make test DATE=YYYY-MM-DD PAGE=1`
+* **데이터 백필/클리어 (Airflow)**: `make backfill`, `make backfill-rg`, `make clear`
+* **DB 쉘 접속**: `make mongo-bash`, `make pgsql`
+* **서비스 쉘 접속**: `make airflow-bash`, `make worker-bash`
+* **Airflow 계정 초기화**: `make reset-pw`
+* **코드 포맷팅**: `docker compose exec worker uv run isort . && docker compose exec worker uv run black .`
 
 # 🧪 TDD & Quality Assurance
 1. **Test-First**: 코드 구현 전 `pytest`와 `pytest-vcr`를 사용하여 각 소스별 파싱 로직 테스트를 먼저 작성함.
@@ -58,11 +59,12 @@
 - `app/scrapers/registry.py`: 스크레이퍼 등록 및 관리 로직
 - `app/scrapers/{geeknews, ...}.py`: 소스별 구현체
 - `tests/`: 소스별 유닛 테스트 코드 및 `tests/site/{source}/` 샘플 데이터
-- `dags/`: Airflow DAG 정의 및 `dags/utils/` 헬퍼 함수
-- `compose.yml`: 메인 설정 (include 방식으로 분리된 파일 취합)
-- `docker/compose.worker.yml`: Worker 및 DB 관련 설정 (Profile: worker)
-- `docker/compose.airflow.yml`: Airflow 및 DB 관련 설정 (Profile: airflow)
-- `docker/app/Dockerfile` & `docker/airflow/Dockerfile`: 서비스별 최적화 설정
+- `dags/`: Airflow DAG 정의
+- `compose.yml`: 메인 설정 (모듈형 include 구조)
+- `docker/`: 인프라 구성 파일
+    - `compose.*.yml`: 서비스별 설정 (proxy, kasm, mongo, airflow, worker)
+    - `app/`, `airflow/`, `kasm/`, `traefik/`: 서비스별 Dockerfile 및 설정
+- `volumes/`: 수집 데이터 및 디버깅 결과 저장소
 - `CLAUDE.md`: 프로젝트 가이드 및 운영 명령어
 
 # 🏗️ 작업 단계 (TDD Workflow)
@@ -72,6 +74,9 @@
 4. **Deploy**: Docker Compose 가동 및 Airflow 스케줄링 확인.
 
 # ⚠️ Constraints
-- 모든 실행은 `uv run` 환경에서 격리되어야 함.
-- 에러 핸들링과 로깅을 상세히 기록하여 Airflow UI에서 모니터링 가능하게 할 것.
-- Docker Compose 실행 시 프로젝트 네임스페이스(`-p`) 분리에 주의하고, 서비스 간 네트워크 통신(`airflow-net`)을 보장할 것.
+- **Environment Isolation**: 모든 실행은 반드시 `uv run` 환경 내에서 이루어져야 하며, 호스트 환경의 Python 패키지 의존성과 격리되어야 함.
+- **Observability**: 상세한 에러 핸들링과 구조화된 로깅을 통해 Airflow UI 및 로그 파일에서 문제 원인을 즉시 파악할 수 있어야 함.
+- **Infrastructure Safety**: Docker Compose 실행 시 프로젝트 네임스페이스(`-p`) 분리를 준수하고, 서비스 간 통신은 정의된 네트워크(`airflow-net`)를 통해서만 수행함.
+- **Data Integrity**: MongoDB 저장 시 반드시 `url` 기반의 Upsert 로직을 사용하여 데이터 중복을 방지하고 멱등성(Idempotency)을 보장함.
+- **Bot Evasion**: Scrapling의 `Stealth` 모드 사용 및 적절한 `Request Headers`, 랜덤 딜레이 설정을 통해 타겟 사이트의 봇 차단을 방지하고 서버 부하를 최소화함.
+- **TDD Rigor**: 새로운 스크레이퍼 구현 시 반드시 `tests/site/{source}/`에 샘플 HTML과 기대 결과 JSON을 포함한 테스트 코드를 먼저 작성하고 통과시켜야 함.
