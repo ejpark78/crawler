@@ -31,6 +31,61 @@ class TestGeekNewsScraper(unittest.TestCase):
         self.base_url = "https://news.hada.io"
         self.sample_dir = "tests/site/geeknews/samples"
 
+    def _read_sample_file(self, filename):
+        """샘플 디렉토리에서 파일을 읽어 내용을 반환합니다."""
+        path = os.path.join(self.sample_dir, filename)
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read()
+
+    def _read_sample_json(self, filename):
+        """샘플 디렉토리에서 JSON 파일을 읽어 딕셔너리로 반환합니다."""
+        content = self._read_sample_file(filename)
+        return json.loads(content)
+
+    def _identify_page_type(self, html):
+        """HTML 내용에 따라 페이지 타입을 판별합니다."""
+        if "topic_row" in html:
+            return "list"
+        if "comment_row" in html or "application/ld+json" in html:
+            return "detail"
+        return "unknown"
+
+    def assert_valid_item(self, item, filename):
+        """수집된 뉴스 항목의 유효성을 검증합니다."""
+        self.assertTrue(item.title, f"{filename} 내 항목의 제목이 없습니다.")
+        self.assertTrue(item.url.startswith("http"), f"{filename} 내 항목의 URL이 부적절합니다.")
+
+    def _verify_list_page(self, filename, html):
+        """리스트 페이지의 파싱 결과와 항목 유효성을 검증합니다."""
+        # 리스트 파싱 시 상세 페이지(댓글) 수집은 패치하여 외부 요청 방지
+        with patch.object(self.scraper, 'fetch_comments', return_value=([], None)):
+            items = self.scraper.parse(html, db_connection=None)
+            self.assertGreaterEqual(len(items), 1, f"리스트 샘플 {filename}에서 항목 추출 실패")
+            for item in items:
+                self.assert_valid_item(item, filename)
+            logger.info(f"Parsed {len(items)} items from list sample: {filename}")
+
+    def _verify_detail_page(self, filename, html):
+        """상세 페이지의 댓글 수집 및 JSON-LD 데이터를 검증합니다."""
+        # fetch_comments 로직 검증을 위해 fetch를 패치
+        with patch.object(self.scraper, '_do_fetch', return_value=html):
+            with patch('time.sleep', return_value=None):
+                comments, json_ld_raw, detail_html = self.scraper.fetch_comments("https://news.hada.io/topic?id=test")
+
+                # JSON-LD 검증: 대응하는 .json 파일이 있으면 내용 비교
+                json_filename = filename.replace(".html", "_ld.json")
+                if os.path.exists(os.path.join(self.sample_dir, json_filename)):
+                    expected_json = self._read_sample_json(json_filename)
+                    if json_ld_raw:
+                        parsed_json_ld = json.loads(json_ld_raw)
+                        self.assertEqual(parsed_json_ld, expected_json, f"{filename}의 JSON-LD 결과가 기대값과 다릅니다.")
+                    else:
+                        self.fail(f"{filename}에서 JSON-LD를 추출하지 못했습니다.")
+                    logger.info(f"Verified JSON-LD for {filename}")
+
+                self.assertTrue(len(comments) >= 0)
+                logger.info(f"Parsed {len(comments)} comments from detail sample: {filename}")
+
     def test_get_backfill_url_combinations(self):
         """백필 URL 생성 규칙 검증"""
         self.assertEqual(self.scraper._get_backfill_url(self.base_url, "1"), f"{self.base_url}/?page=1")
@@ -49,49 +104,14 @@ class TestGeekNewsScraper(unittest.TestCase):
 
         for filename in files:
             with self.subTest(filename=filename):
-                sample_path = os.path.join(self.sample_dir, filename)
-                with open(sample_path, 'r', encoding='utf-8') as f:
-                    html = f.read()
+                html = self._read_sample_file(filename)
+                page_type = self._identify_page_type(html)
 
-                # 파일 내용에 따라 리스트 페이지인지 상세 페이지인지 판별
-                is_list_page = "topic_row" in html
-                is_detail_page = "comment_row" in html or "application/ld+json" in html
-
-                if is_list_page:
-                    # 리스트 파싱 시 상세 페이지(댓글) 수집은 패치하여 외부 요청 방지
-                    with patch.object(self.scraper, 'fetch_comments', return_value=([], None)):
-                        items = self.scraper.parse(html, db_connection=None)
-                        self.assertGreaterEqual(len(items), 1, f"리스트 샘플 {filename}에서 항목 추출 실패")
-                        for item in items:
-                            self.assertTrue(item.title, f"{filename} 내 항목의 제목이 없습니다.")
-                            self.assertTrue(item.url.startswith("http"), f"{filename} 내 항목의 URL이 부적절합니다.")
-                        logger.info(f"Parsed {len(items)} items from list sample: {filename}")
-
-                if is_detail_page:
-                    # fetch_comments 로직 검증을 위해 fetch를 패치
-                    with patch.object(self.scraper, '_do_fetch', return_value=html):
-                        with patch('time.sleep', return_value=None):
-                            comments, json_ld_raw, detail_html = self.scraper.fetch_comments("https://news.hada.io/topic?id=test")
-
-                            # JSON-LD 검증: 대응하는 .json 파일이 있으면 내용 비교
-                            json_filename = filename.replace(".html", "_ld.json")
-                            json_path = os.path.join(self.sample_dir, json_filename)
-                            if os.path.exists(json_path):
-                                with open(json_path, 'r', encoding='utf-8') as jf:
-                                    expected_json_str = jf.read()
-                                # json_ld_raw는 문자열이므로 직접 비교하거나 JSON 객체로 변환하여 비교
-                                if json_ld_raw:
-                                    parsed_json_ld = json.loads(json_ld_raw)
-                                    expected_json = json.loads(expected_json_str)
-                                    self.assertEqual(parsed_json_ld, expected_json, f"{filename}의 JSON-LD 결과가 기대값과 다릅니다.")
-                                else:
-                                    self.fail(f"{filename}에서 JSON-LD를 추출하지 못했습니다.")
-                                logger.info(f"Verified JSON-LD for {filename}")
-
-                            self.assertTrue(len(comments) >= 0)
-                            logger.info(f"Parsed {len(comments)} comments from detail sample: {filename}")
-                
-                if not (is_list_page or is_detail_page):
+                if page_type == "list":
+                    self._verify_list_page(filename, html)
+                elif page_type == "detail":
+                    self._verify_detail_page(filename, html)
+                elif page_type == "unknown":
                     logger.warning(f"Unknown page type for sample: {filename}")
 
     def test_live_main_page(self):

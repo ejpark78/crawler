@@ -9,10 +9,12 @@ The registered scrapers are dynamically selected via the 'SOURCE' argument,
 which also determines the name of the MongoDB database used for data isolation.
 """
 from app.scrapers.geeknews import GeekNewsScraper
+from app.scrapers.pytorch_kr import PyTorchKRScraper
 
 # Mapping between Source Names and Scraper Classes
 # Key: Source identifier used in CLI or DAGs (Case-Sensitive)
 # Value: Scraper class implementing BaseScraper
 SCRAPER_REGISTRY = {
     "GeekNews": GeekNewsScraper,
+    "PyTorchKR": PyTorchKRScraper,
 }

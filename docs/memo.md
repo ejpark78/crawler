@@ -31,7 +31,14 @@
 이제 테스트 코드부터 시작하는 완벽한 파이프라인을 구축해 보세요! 다음 단계로 CI/CD(GitHub Actions) 연동까지 고려해 드릴까요?
 
 ```
-docker compose -f /app/compose.yml run -e /app/.env --rm worker uv run python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-01 --page 2
+docker compose -f /app/compose.yml run -e /app/.env --rm worker \
+   uv run python -m app.main --source GeekNews --url https://news.hada.io/ --date 2026-04-01 --page 2
+
+
+
+docker run --rm -v .:/app -w /app \
+   crawler/worker:latest \
+   uv run python3 -m pytest tests/test_pytorch_kr.py -v -s
 
 ```
 
