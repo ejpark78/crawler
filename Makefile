@@ -17,11 +17,15 @@
 #   4. Airflow        : DAG 관리, Backfill 소급 적용 및 관리자 계정 초기화
 # ==============================================================================
 
+SHELL := /bin/bash
+
 # Variables
 SOURCE ?= GeekNews
 URL ?= https://news.hada.io/
 DATE ?= $(shell date +%Y-%m-%d)
 PAGE ?= 1
+START_DATE ?= 2026-04-11
+END_DATE ?= 2026-04-17
 DAG_ID = geeknews
 OUT_PATH ?= /app/volumes/debuging/$(shell date +"%Y-%m-%d_%H%M")/$(SOURCE)_$(DATE)_$(PAGE)
 LOG_LEVEL ?= INFO
@@ -88,12 +92,41 @@ test-docker:
 unittest:
 	docker compose exec worker uv run pytest
 
+# Example: make crawl-range START_DATE=2026-04-11 END_DATE=2026-04-17
+crawl-range:
+	@current_date=$(START_DATE); \
+	until [[ "$$current_date" > "$(END_DATE)" ]]; do \
+		echo "------------------------------------------"; \
+		echo "Processing date: $$current_date"; \
+		for page in 1 2 3 4 5; do \
+			echo "Executing: Date=$$current_date, Page=$$page"; \
+			docker compose -f docker/compose.worker.yml run --rm worker \
+				uv run python -m app.main \
+				--source $(SOURCE) \
+				--url $(URL) \
+				--date $$current_date \
+				--page $$page; \
+		done; \
+		current_date=$$(date -I -d "$$current_date + 1 day"); \
+	done
+
 # --- Airflow ---
 # Example: make backfill START=2023-04-16 END=2026-04-01
 # Example: make backfill START=2026-03-01 END=2026-03-31
 backfill:
 	docker compose exec airflow airflow dags backfill \
 	  -s $(START) -e $(END) $(DAG_ID)
+
+# Example: make backfill-range START_DATE=2026-03-01 END_DATE=2026-03-31
+backfill-range:
+	@current_date=$(END_DATE); \
+	until [[ "$$current_date" < "$(START_DATE)" ]]; do \
+		echo "------------------------------------------"; \
+		echo "Backfilling date: $$current_date"; \
+		docker compose exec airflow airflow dags backfill \
+			-s $$current_date -e $$current_date $(DAG_ID); \
+		current_date=$$(date -I -d "$$current_date - 1 day"); \
+	done
 
 # Example: make clear START=2026-04-01 END=2026-04-17
 clear:
