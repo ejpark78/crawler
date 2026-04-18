@@ -9,8 +9,6 @@ services:
       dockerfile: docker/app/Dockerfile
     image: crawler/worker:latest
     restart: no
-    volumes:
-      - ${VOLUME_PATH}/..:/app
     networks:
       - airflow-net
 

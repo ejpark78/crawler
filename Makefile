@@ -90,6 +90,7 @@ unittest:
 
 # --- Airflow ---
 # Example: make backfill START=2023-04-16 END=2026-04-01
+# Example: make backfill START=2026-03-01 END=2026-03-31
 backfill:
 	docker compose exec airflow airflow dags backfill \
 	  -s $(START) -e $(END) $(DAG_ID)
