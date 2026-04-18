@@ -1,17 +1,21 @@
+# Airflow 워크플로우 관리 모듈
+# 크롤러 작업의 스케줄링 및 모니터링을 담당합니다.
+#
+# 포함된 서비스:
+# - airflow: 스케줄러, 웹서버 및 워커 통합 실행 (접속 정보: http://af.localhost)
+# - postgres: Airflow 메타데이터 저장용 DB
+# - pgadmin: PostgreSQL 웹 관리 도구 (접속 정보: http://pg.localhost)
+
 services:
   airflow:
     build:
       context: ..
       dockerfile: docker/airflow/Dockerfile
     image: crawler/airflow:latest
+    restart: unless-stopped
     user: "root"
-    networks:
-      - airflow-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.airflow.rule=Host(`af.localhost`)"
-      - "traefik.http.routers.airflow.entrypoints=web"
-      - "traefik.http.services.airflow.loadbalancer.server.port=8080"
+    working_dir: /app
+    command: standalone
     environment:
       - AIRFLOW__CORE__EXECUTOR=${AIRFLOW__CORE__EXECUTOR}
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
@@ -28,10 +32,15 @@ services:
     volumes:
       - ..:/app
       - ../dags:/opt/airflow/dags:ro
-      - ./volumes/airflow/logs:/opt/airflow/logs
+      - ${VOLUME_PATH}/airflow/logs:/opt/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
-    working_dir: /app
-    command: standalone
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.airflow.rule=Host(`af.localhost`)"
+      - "traefik.http.routers.airflow.entrypoints=web"
+      - "traefik.http.services.airflow.loadbalancer.server.port=8080"
+    networks:
+      - airflow-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,15 +51,16 @@ services:
       retries: 3
 
   postgres:
-    networks:
-      - airflow-net
     image: postgres:13
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
+      - ${VOLUME_PATH}/postgres:/var/lib/postgresql/data
+    networks:
+      - airflow-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow"]
       interval: 10s
@@ -58,9 +68,11 @@ services:
       retries: 5
 
   pgadmin:
-    networks:
-      - airflow-net
     image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.pgadmin.rule=Host(`pg.localhost`)"
@@ -69,9 +81,8 @@ services:
       - "traefik.http.middlewares.pgadmin-stripprefix.stripprefix.prefixes="
       - "traefik.http.middlewares.pgadmin-scriptname.headers.customrequestheaders.X-Script-Name="
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    networks:
+      - airflow-net
     depends_on:
       postgres:
         condition: service_healthy

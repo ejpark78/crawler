@@ -1,10 +1,18 @@
+# MongoDB 데이터베이스 모듈
+# 데이터 저장소 및 웹 기반 관리 인터페이스를 제공합니다.
+#
+# 포함된 서비스:
+# - mongodb: 크롤링된 데이터를 저장하는 NoSQL DB
+# - mongo-express: 웹 기반 DB 관리 도구 (접속 정보: http://me.localhost)
+
 services:
   mongodb:
+    image: mongo:latest
+    restart: unless-stopped
+    volumes:
+      - ${VOLUME_PATH}/mongodb:/data/db
     networks:
       - airflow-net
-    image: mongo:latest
-    volumes:
-      - ./volumes/mongodb:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -12,19 +20,20 @@ services:
       retries: 5
 
   mongo-express:
-    networks:
-      - airflow-net
     image: mongo-express
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.mongo-express.rule=Host(`me.localhost`)"
-      - "traefik.http.routers.mongo-express.entrypoints=web"
-      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
+    restart: unless-stopped
     environment:
       - ME_CONFIG_MONGODB_URL=mongodb://mongodb:27017/
       - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
       - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
       - ME_CONFIG_SITE_BASEURL=
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-express.rule=Host(`me.localhost`)"
+      - "traefik.http.routers.mongo-express.entrypoints=web"
+      - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
+    networks:
+      - airflow-net
     depends_on:
       - mongodb
     healthcheck:

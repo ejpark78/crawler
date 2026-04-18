@@ -1,12 +1,37 @@
-services:
+# Kasm 배스천 호스트 모듈
+# 내부 작업 및 브라우저 기반 작업을 위한 VDI(Virtual Desktop Infrastructure) 환경을 제공합니다.
+#
+# 주요 기능:
+# - Ubuntu 기반 GUI 환경
+# - 한글 입력 지원 (Fcitx)
+# - 주요 도구 내장: Chrome, MongoDB Compass, VS Code
+# - 접속 정보: http://kasm.localhost (내부 6901 포트로 HTTPS 라우팅)
 
+services:
   kasm:
-    image: crawler/kasm:latest
-    privileged: false
-    shm_size: "1gb"
     build:
       context: ../docker/kasm
       dockerfile: Dockerfile
+    image: crawler/kasm:latest
+    restart: unless-stopped
+    shm_size: "1gb"
+    privileged: false
+    cap_add:
+      - SYS_ADMIN
+    environment:
+      - KASM_USER=${KASM_USER}
+      - VNC_PW=${VNC_PW}
+      - VNCOPTIONS=-disableBasicAuth
+      - LANG=${LANG}
+      - LANGUAGE=${LANGUAGE}
+      - LC_ALL=${LC_ALL}
+      - XMODIFIERS=@im=fcitx
+      - GTK_IM_MODULE=fcitx
+      - QT_IM_MODULE=fcitx
+    volumes:
+      - ${VOLUME_PATH}/kasm:/mnt
+      - ${VOLUME_PATH}/kasm/home:/home/kasm-user
+      - /var/run/docker.sock:/var/run/docker.sock
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.kasm.rule=Host(`kasm.localhost`)"
@@ -14,30 +39,14 @@ services:
       - "traefik.http.services.kasm.loadbalancer.server.port=6901"
       - "traefik.http.services.kasm.loadbalancer.server.scheme=https"
       - "traefik.http.services.kasm.loadbalancer.serversTransport=kasmTransport@file"
-    environment:
-      - KASM_USER=${KASM_USER}
-      - VNC_PW=${VNC_PW}
-      - LANG=${LANG}
-      - LANGUAGE=${LANGUAGE}
-      - LC_ALL=${LC_ALL}
-      - XMODIFIERS=@im=fcitx
-      - GTK_IM_MODULE=fcitx
-      - QT_IM_MODULE=fcitx
-    restart: unless-stopped
-    cap_add:
-      - SYS_ADMIN
-    volumes:
-      - ${PWD}/volumes/kasm:/mnt
-      - ${PWD}/volumes/kasm/home:/home/kasm-user
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - airflow-net
     healthcheck:
       test: ["CMD", "curl", "-k", "https://localhost:6901/api/health"]
-      interval: 30s      
-      timeout: 10s       
-      retries: 3          
-      start_period: 15s  
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
 networks:
   airflow-net:

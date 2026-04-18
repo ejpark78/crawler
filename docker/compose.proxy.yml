@@ -1,3 +1,10 @@
+# Traefik 리버스 프록시 모듈
+# 외부 요청을 수신하여 호스트네임에 따라 적절한 서비스로 라우팅합니다.
+#
+# 접속 정보:
+# - 대시보드: http://dash.localhost/dashboard/
+# - 엔트리포인트: web (80번 포트)
+
 services:
   proxy:
     build:
@@ -6,6 +13,13 @@ services:
     restart: always
     ports:
       - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik_dash.rule=Host(`dash.localhost`)"
+      - "traefik.http.routers.traefik_dash.service=api@internal"
+      - "traefik.http.routers.traefik_dash.entrypoints=web"
     networks:
       - airflow-net
     depends_on:
@@ -15,11 +29,11 @@ services:
         condition: service_healthy
       mongo-express:
         condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik_dash.rule=Host(`dash.localhost`)"
-      - "traefik.http.routers.traefik_dash.service=api@internal"
-      - "traefik.http.routers.traefik_dash.entrypoints=web"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     command:
       - "--api.dashboard=true"
       - "--providers.docker=true"
@@ -28,13 +42,6 @@ services:
       - "--ping=true"
       - "--providers.file.filename=/etc/traefik/dynamic_conf.yml"
       - "--providers.file.watch=true"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
 networks:
   airflow-net:
