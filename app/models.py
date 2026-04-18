@@ -33,5 +33,4 @@ class NewsItem(BaseModel):
     published_at: Optional[datetime] = Field(None, description="발행 일시")
     content: Optional[str] = Field(None, description="본문 내용")
     comments: Optional[List[CommentItem]] = Field(default_factory=list, description="수집된 댓글 리스트")
-    json_ld_raw: Optional[str] = Field(None, description="추출된 JSON-LD 원본 데이터")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="수집 일시 (UTC)")

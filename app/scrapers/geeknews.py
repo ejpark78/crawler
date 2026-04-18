@@ -72,35 +72,31 @@ class GeekNewsScraper(BaseScraper):
                 # 중복 체크
                 existing_item = collection.find_one({"_id": url}) if collection is not None else None
                 
-                comments = []
-                json_ld_raw = None
-
                 if not existing_item:
                     logger.info(f"New item: {title}. Fetching comments...")
-                    comments, json_ld_raw = self.fetch_comments(url)
+                    comments = self.fetch_comments(url)
                 else:
                     logger.info(f"Skip duplicate: {title}")
+                    continue
 
                 items.append(NewsItem(
                     title=title,
                     url=url,
                     source=self.source_name,
-                    comments=comments,
-                    json_ld=json_ld_raw
+                    comments=comments
                 ))
             except Exception as e:
                 logger.error(f"Row parsing error: {e}")
                 continue
         return items
 
-    def fetch_comments(self, url: str) -> Tuple[List[CommentItem], Optional[str]]:
-        """상세 페이지에서 댓글과 JSON-LD를 수집합니다."""
+    def fetch_comments(self, url: str) -> List[CommentItem]:
+        """상세 페이지에서 댓글 수집 (JSON-LD 우선, HTML Fallback)"""
         html = self.fetch(url)
-        if not html: return [], None
+        if not html: return []
         
         soup = BeautifulSoup(html, 'html.parser')
         comments = []
-        json_ld_raw = None
         
         try:
             # 1. JSON-LD 시도
@@ -126,7 +122,7 @@ class GeekNewsScraper(BaseScraper):
                         ))
         except Exception as e:
             logger.error(f"Comments error at {url}: {e}")
-        return comments, json_ld_raw
+        return comments
 
     def _process_json_ld_comment(self, comment_data: dict, comments: List[CommentItem]):
         if not isinstance(comment_data, dict): return
