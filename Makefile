@@ -92,8 +92,8 @@ test-docker:
 unittest:
 	docker compose exec worker uv run pytest
 
-# Example: make crawl-range START_DATE=2026-04-11 END_DATE=2026-04-17
-crawl-range:
+# Example: make backfill-data START_DATE=2026-04-01 END_DATE=2026-04-10
+backfill-data:
 	@current_date=$(START_DATE); \
 	until [[ "$$current_date" > "$(END_DATE)" ]]; do \
 		echo "------------------------------------------"; \
@@ -111,14 +111,14 @@ crawl-range:
 	done
 
 # --- Airflow ---
-# Example: make backfill START=2023-04-16 END=2026-04-01
+# Example: make backfill START=2023-04-01 END=2026-04-10
 # Example: make backfill START=2026-03-01 END=2026-03-31
-backfill:
+backfill-rg:
 	docker compose exec airflow airflow dags backfill \
 	  -s $(START) -e $(END) $(DAG_ID)
 
-# Example: make backfill-range START_DATE=2026-03-01 END_DATE=2026-03-31
-backfill-range:
+# Example: make backfill-af START_DATE=2026-03-01 END_DATE=2026-03-31
+backfill:
 	@current_date=$(END_DATE); \
 	until [[ "$$current_date" < "$(START_DATE)" ]]; do \
 		echo "------------------------------------------"; \
