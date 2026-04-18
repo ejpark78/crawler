@@ -23,7 +23,8 @@ URL ?= https://news.hada.io/
 DATE ?= $(shell date +%Y-%m-%d)
 PAGE ?= 1
 DAG_ID = geeknews
-OUT_PATH ?= /app/volumes/$(SOURCE)_$(DATE)_$(PAGE).json
+OUT_PATH ?= /app/volumes/debuging/$(shell date +"%Y-%m-%d_%H%M")/$(SOURCE)_$(DATE)_$(PAGE)
+LOG_LEVEL ?= INFO
 
 .PHONY: *
 
@@ -75,6 +76,7 @@ collect:
 # Example: make collect-test DATE=2026-03-25 PAGE=1
 collect-docker:
 	docker run --rm -v .:/app -w /app \
+		-e LOG_LEVEL=$(LOG_LEVEL) \
 		crawler/worker:latest \
 		uv run python -m app.main \
 		--source $(SOURCE) \
