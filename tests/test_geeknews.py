@@ -15,6 +15,7 @@ GeekNewsScraper 테스트 모듈
 import unittest
 from unittest.mock import patch
 import os
+import json
 import logging
 from app.scrapers.geeknews import GeekNewsScraper
 
@@ -70,8 +71,23 @@ class TestGeekNewsScraper(unittest.TestCase):
                     # fetch_comments 로직 검증을 위해 fetch를 패치
                     with patch.object(self.scraper, '_do_fetch', return_value=html):
                         with patch('time.sleep', return_value=None):
-                            comments, json_ld = self.scraper.fetch_comments("https://news.hada.io/topic?id=test")
-                            # 댓글이 0개일 수도 있으나(새 글), 샘플 파일은 보통 테스트용이므로 1개 이상 기대
+                            comments, json_ld_raw, detail_html = self.scraper.fetch_comments("https://news.hada.io/topic?id=test")
+
+                            # JSON-LD 검증: 대응하는 .json 파일이 있으면 내용 비교
+                            json_filename = filename.replace(".html", "_ld.json")
+                            json_path = os.path.join(self.sample_dir, json_filename)
+                            if os.path.exists(json_path):
+                                with open(json_path, 'r', encoding='utf-8') as jf:
+                                    expected_json_str = jf.read()
+                                # json_ld_raw는 문자열이므로 직접 비교하거나 JSON 객체로 변환하여 비교
+                                if json_ld_raw:
+                                    parsed_json_ld = json.loads(json_ld_raw)
+                                    expected_json = json.loads(expected_json_str)
+                                    self.assertEqual(parsed_json_ld, expected_json, f"{filename}의 JSON-LD 결과가 기대값과 다릅니다.")
+                                else:
+                                    self.fail(f"{filename}에서 JSON-LD를 추출하지 못했습니다.")
+                                logger.info(f"Verified JSON-LD for {filename}")
+
                             self.assertTrue(len(comments) >= 0)
                             logger.info(f"Parsed {len(comments)} comments from detail sample: {filename}")
                 
@@ -81,7 +97,7 @@ class TestGeekNewsScraper(unittest.TestCase):
     def test_live_main_page(self):
         """실제 라이브 사이트 메인 페이지 수집 테스트"""
         logger.info("Starting live test for main page...")
-        with patch.object(self.scraper, 'fetch_comments', return_value=([], None)):
+        with patch.object(self.scraper, 'fetch_comments', return_value=([], None, None)):
             html = self.scraper.fetch(self.base_url)
             items = self.scraper.parse(html, db_connection=None)
             self.assertGreater(len(items), 0, "라이브 사이트 메인 페이지 파싱 결과가 비어있습니다.")
@@ -90,7 +106,7 @@ class TestGeekNewsScraper(unittest.TestCase):
         """실제 라이브 사이트 상세 페이지 수집 테스트"""
         test_url = f"{self.base_url}/topic?id=28587"
         logger.info(f"Starting live test for detail page: {test_url}")
-        comments, json_ld = self.scraper.fetch_comments(test_url)
+        comments, json_ld_raw, detail_html = self.scraper.fetch_comments(test_url)
         self.assertGreaterEqual(len(comments), 1, "라이브 상세 페이지에서 댓글 수집에 실패했습니다.")
 
 if __name__ == '__main__':
