@@ -61,7 +61,7 @@ class BaseScraper(ABC):
         """Parses HTML and converts it into a list of model objects."""
         pass
 
-    def save(self, item: GeekNewsList | PytorchKRContents, db_connection, html: Optional[str] = None):
+    def save(self, item: GeekNewsList, db_connection, html: Optional[str] = None):
         """Persists a single item to MongoDB and local storage."""
         # 1. Local file persistence (regardless of DB connection)
         if getattr(self, 'debug_path', None):

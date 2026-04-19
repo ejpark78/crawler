@@ -40,7 +40,7 @@ with DAG(
     ).expand(
         bash_command=[
             "docker compose run --rm worker uv run python -m app.main "
-            f"--source GeekNews --date {{{{ ds }}}} --page {p}"
+            f"--source GeekNews --page {p} --date {{{{ ds }}}}"
             for p in PAGES
         ],
     )

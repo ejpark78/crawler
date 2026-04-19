@@ -1,3 +1,11 @@
+# 이 Dockerfile은 Kasm Workspaces용 맞춤형 개발 환경 이미지를 빌드합니다.
+# kasmweb/core-ubuntu-noble:1.18.0을 기반으로 하며, 다음과 같은 주요 설정을 포함합니다:
+# 1. 한국어 환경: 한국어 로케일 설정 및 fcitx-hangul을 이용한 한글 입력 지원
+# 2. 개발 도구: uv, Node.js, Python3, Git, Zsh, build-essential 등 설치
+# 3. GUI 애플리케이션: Google Chrome, VS Code, DBeaver, MongoDB Compass 설치
+# 4. 시스템 도구: Docker CLI 및 Antigravity 설치, Docker-out-of-Docker(DooD)를 위한 그룹 권한 설정
+# 5. 사용자 환경: kasm-user에게 sudo 권한 부여 및 기본 셸을 zsh로 변경
+#
 FROM kasmweb/core-ubuntu-noble:1.18.0
 USER root
 
