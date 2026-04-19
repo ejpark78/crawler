@@ -90,11 +90,13 @@ def main():
 
     try:
         # Execution
-        scraper.run(
+        items, _ = scraper.run(
             db_connection=db_conn,
             backfill_date=args.date,
             page=args.page
         )
+        # Output result for Airflow XCom capture
+        print(f"RESULT_COUNT: {len(items)}")
     finally:
         if client:
             client.close()

@@ -13,35 +13,61 @@ PyTorchKR 뉴스 수집 DAG
 - PYTORCH_KR_MAX_ACTIVE_RUNS: 동시 실행 가능한 DAG Run의 최대 개수 (기본값: 1)
 - PYTORCH_KR_CONCURRENCY: DAG 내에서 동시 실행 가능한 태스크의 최대 개수 (기본값: 1)
 """
-import os
 from datetime import timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
+from airflow.operators.python import ShortCircuitOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.dates import days_ago
-
-PAGES = list(range(1, 6))
 
 with DAG(
     dag_id="pytorch_kr",
-    start_date=days_ago(7),
-    schedule_interval="@daily",
-    catchup=True,
-    tags=["Crawler", "PyTorchKR"],
-    max_active_runs=int(os.getenv("PYTORCH_KR_MAX_ACTIVE_RUNS", 1)),
-    concurrency=int(os.getenv("PYTORCH_KR_CONCURRENCY", 1)),
+    start_date=days_ago(1),
+    schedule_interval=None,  # Recursive DAGs are usually triggered manually or via start_date
+    catchup=False,
+    tags=["Crawler", "PyTorchKR", "Recursive"],
+    max_active_runs=1,
 ) as dag:
-    dag.doc_str = "PyTorchKR 뉴스 수집 DAG (Dynamic Task Mapping)"
+    dag.doc_str = "PyTorchKR 뉴스 수집 DAG (Recursive Pagination)"
 
-    # Dynamic Task Mapping: 실행 시점에 pages 리스트만큼 태스크가 동적으로 생성됨
-    collect = BashOperator.partial(
+    # Get current page from dag_run.conf (default to 1)
+    page = "{{ dag_run.conf.get('page', 1) }}"
+
+    # 1. Collect specific page
+    collect = BashOperator(
         task_id="collect",
-        execution_timeout=timedelta(hours=1),
-    ).expand(
-        bash_command=[
-            "docker compose -f /app/docker/compose.worker.yml "
-            "run --rm worker uv run python -m app.main "
-            "--source PyTorchKR "
-            f"--date {{{{ ds }}}} --page {p}"
-            for p in PAGES
-        ],
+        bash_command=(
+            "docker compose run --rm worker uv run python -m app.main "
+            f"--source PyTorchKR --page {page}"
+        ),
+        cwd="/app",
+        do_xcom_push=True,
     )
+
+    # 2. Check if we should continue (items found > 0)
+    def _check_continuation(ti):
+        # Capture the last line of stdout which contains RESULT_COUNT
+        output = ti.xcom_pull(task_ids='collect')
+        if not output:
+            return False
+        
+        import re
+        match = re.search(r"RESULT_COUNT: (\d+)", output)
+        if match:
+            count = int(match.group(1))
+            return count > 0
+        return False
+
+    check = ShortCircuitOperator(
+        task_id="check_more_data",
+        python_callable=_check_continuation,
+    )
+
+    # 3. Trigger next page
+    trigger_next = TriggerDagRunOperator(
+        task_id="trigger_next_page",
+        trigger_dag_id="pytorch_kr",
+        conf={"page": "{{ (dag_run.conf.get('page', 1) | int) + 1 }}"},
+    )
+
+    collect >> check >> trigger_next

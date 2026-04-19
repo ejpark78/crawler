@@ -36,12 +36,11 @@ with DAG(
     collect = BashOperator.partial(
         task_id="collect",
         execution_timeout=timedelta(hours=1),
+        cwd="/app",
     ).expand(
         bash_command=[
-            "docker compose -f /app/docker/compose.worker.yml "
-            "run --rm worker uv run python -m app.main "
-            "--source GeekNews "
-            f"--date {{{{ ds }}}} --page {p}"
+            "docker compose run --rm worker uv run python -m app.main "
+            f"--source GeekNews --date {{{{ ds }}}} --page {p}"
             for p in PAGES
         ],
     )
