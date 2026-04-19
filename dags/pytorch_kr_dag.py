@@ -23,9 +23,9 @@ PAGES = list(range(1, 4))
 
 with DAG(
     dag_id="pytorch_kr",
-    start_date=days_ago(7),
+    start_date=days_ago(1),
     schedule_interval="@daily",
-    catchup=True,
+    catchup=False,
     tags=["Crawler", "PyTorchKR"],
     max_active_runs=int(os.getenv("PYTORCH_KR_MAX_ACTIVE_RUNS", 1)),
     concurrency=int(os.getenv("PYTORCH_KR_CONCURRENCY", 1)),
