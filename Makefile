@@ -65,17 +65,17 @@ stats:
 	docker stats
 
 # --- Collection & Testing ---
-# Example: make test DATE=2026-03-25 PAGE=1 LOG_LEVEL=DEBUG
+# Example: make test SOURCE=PyTorchKR PAGE=1 LOG_LEVEL=DEBUG
 test:
-	docker compose run -e LOG_LEVEL=$(LOG_LEVEL)\
-		--rm worker uv run python -m app.main \
+	docker compose run --rm -v .:/app -w /app -e LOG_LEVEL=$(LOG_LEVEL) \
+		worker uv run python -m app.main \
 		--source $(SOURCE) \
 		--date $(DATE) \
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
 
 # Example: make debug SOURCE=GeekNews DATE=2026-04-18 PAGE=1 LOG_LEVEL=DEBUG
-# Example: make debug SOURCE=PyTorchKR DATE=2026-04-18 PAGE=1 LOG_LEVEL=DEBUG
+# Example: make debug SOURCE=PyTorchKR PAGE=1 LOG_LEVEL=DEBUG
 debug:
 	docker run --rm -v .:/app -w /app \
 		-e LOG_LEVEL=$(LOG_LEVEL) \

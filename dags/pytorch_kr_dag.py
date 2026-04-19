@@ -38,7 +38,8 @@ with DAG(
         task_id="collect",
         bash_command=(
             "docker compose run --rm worker uv run python -m app.main "
-            f"--source PyTorchKR --page {page}"
+            f"--source PyTorchKR --date {{{{ ds }}}} --page {page} "
+            f"--out_path /app/volumes/debug/PyTorchKR/{{{{ ds }}}} "
         ),
         cwd="/app",
         do_xcom_push=True,
