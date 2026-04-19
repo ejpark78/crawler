@@ -26,6 +26,7 @@ import hashlib
 from app.models import GeekNewsList, PytorchKRContents
 from scrapling import StealthyFetcher
 
+
 # Logging configuration
 logging.basicConfig(
     level=logging.INFO,

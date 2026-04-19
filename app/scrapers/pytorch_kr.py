@@ -15,10 +15,9 @@ PyTorch KR 스크레이퍼 모듈
 """
 import json
 import logging
-from typing import List, Optional
+from typing import List
 from app.models import PytorchKRContents
 from app.scrapers.base import BaseScraper
-import re
 from curl_cffi import requests
 from bs4 import BeautifulSoup
 
