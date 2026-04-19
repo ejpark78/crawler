@@ -107,7 +107,7 @@ run:
 	done
 
 # --- Airflow ---
-# Example: make backfill START_DATE=2025-01-01 END_DATE=2025-08-20
+# Example: make backfill SOURCE=GeekNews START_DATE=2025-01-01 END_DATE=2025-06-27
 backfill:
 	@current_date=$(END_DATE); \
 	until [[ "$$current_date" < "$(START_DATE)" ]]; do \

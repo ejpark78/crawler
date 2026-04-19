@@ -49,18 +49,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtk-3-0 \
     libsecret-1-0 \
     dbus-x11 \
-    # 2.3 Google Chrome (via .deb)
+    # External Repositories
+    && install -m 0755 -d /etc/apt/keyrings \
+    # Google Chrome (via .deb)
     && wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
     && apt-get install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb \
     && rm google-chrome-stable_current_amd64.deb \
-    # 2.4 MongoDB Compass (via .deb)
+    # VS Code
+    && curl -fSsL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/packages.microsoft.gpg \
+    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list \
+    && apt-get update && apt-get install -y --no-install-recommends code \
+    # DBeaver
+    && add-apt-repository ppa:serge-rider/dbeaver-ce -y \
+    && apt-get update && apt-get install -y --no-install-recommends dbeaver-ce \
+    # MongoDB Compass (via .deb)
     && wget -q https://compass.mongodb.com/api/v2/download/latest/compass/stable/linux_deb -O mongodb-compass.deb \
     && apt-get install -y --no-install-recommends ./mongodb-compass.deb \
     && rm mongodb-compass.deb \
-    # 2.5 Setup Locales (Korean & English)
+    # Setup Locales (Korean & English)
     && locale-gen ko_KR.UTF-8 en_US.UTF-8 \
     && update-locale LANG=ko_KR.UTF-8 \
-    # 2.6 Cleanup
+    # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -68,7 +77,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 USER kasm-user
 WORKDIR /home/kasm-user
 
-# 3.1 Fcitx Setup (User)
+# 3.1 Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+    && git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions \
+    && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
+    && sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/' ~/.zshrc
+
+# 3.2 Fcitx Setup (User)
 RUN im-config -n fcitx
 
 USER root
@@ -96,6 +111,8 @@ RUN chmod +x /dockerstartup/custom_startup.sh \
 RUN echo "kasm-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # 6. Final Configuration
+RUN usermod -s /bin/zsh kasm-user
+
 USER kasm-user
 WORKDIR /home/kasm-user
 
