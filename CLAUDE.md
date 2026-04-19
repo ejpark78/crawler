@@ -86,3 +86,9 @@
 - **Data Integrity**: MongoDB 저장 시 반드시 `url` 기반의 Upsert 로직을 사용하여 데이터 중복을 방지하고 멱등성(Idempotency)을 보장함.
 - **Bot Evasion**: Scrapling의 `Stealth` 모드 사용 및 적절한 `Request Headers`, 랜덤 딜레이 설정을 통해 타겟 사이트의 봇 차단을 방지하고 서버 부하를 최소화함.
 - **TDD Rigor**: 새로운 스크레이퍼 구현 시 반드시 `tests/site/{source}/`에 샘플 HTML과 기대 결과 JSON을 포함한 테스트 코드를 먼저 작성하고 통과시켜야 함.
+- **Localization**: 프로젝트의 모든 문서(docstring, Dockerfile 주석 등)는 한글을 원칙으로 하며, 기술적 용어는 병기하거나 표준 용어를 사용함.
+
+# 📚 Documentation Standards
+- **Python Docstrings**: `app/models.py` 및 주요 모듈의 docstring은 한글로 작성하여 가독성을 높임.
+- **Dockerfiles**: `docker/` 폴더 내의 모든 Dockerfile은 각 단계별 설명과 주요 설정을 한글 주석으로 상세히 기록함.
+- **Consistency**: 변수명이나 클래스명은 영문을 사용하되, 그 역할과 비즈니스 로직에 대한 설명은 한글로 작성하여 팀 내 의사소통 효율을 극대화함.

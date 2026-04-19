@@ -1,15 +1,17 @@
-# 이 Dockerfile은 Kasm Workspaces용 맞춤형 개발 환경 이미지를 빌드합니다.
-# kasmweb/core-ubuntu-noble:1.18.0을 기반으로 하며, 다음과 같은 주요 설정을 포함합니다:
-# 1. 한국어 환경: 한국어 로케일 설정 및 fcitx-hangul을 이용한 한글 입력 지원
-# 2. 개발 도구: uv, Node.js, Python3, Git, Zsh, build-essential 등 설치
-# 3. GUI 애플리케이션: Google Chrome, VS Code, DBeaver, MongoDB Compass 설치
-# 4. 시스템 도구: Docker CLI 및 Antigravity 설치, Docker-out-of-Docker(DooD)를 위한 그룹 권한 설정
-# 5. 사용자 환경: kasm-user에게 sudo 권한 부여 및 기본 셸을 zsh로 변경
+# Kasm Workspaces 맞춤형 개발 환경 (VDI) Dockerfile
 #
+# 이 설정은 kasmweb/core-ubuntu-noble을 기반으로 최적화된 GUI 개발 환경을 구축합니다.
+# 주요 특징:
+# 1. 완벽한 한글 환경: 한국어 로케일 설정 및 fcitx-hangul 기반의 한글 입력 체계 구축
+# 2. 강력한 개발 스택: uv, Node.js, Python, Git 및 고성능 터미널(Alacritty) 지원
+# 3. GUI 생산성 도구: VS Code, Google Chrome, DBeaver, MongoDB Compass 사전 설치
+# 4. 인프라 제어: Docker CLI 및 Docker-out-of-Docker(DooD)를 위한 권한 설정 포함
+# 5. 사용자 최적화: kasm-user의 sudo 권한 부여 및 Zsh 기반의 현대적인 셸 환경 제공
+
 FROM kasmweb/core-ubuntu-noble:1.18.0
 USER root
 
-# 1. Environment variables
+# 1. 환경 변수 설정
 ENV DEBIAN_FRONTEND=noninteractive \
     UV_INSTALL_DIR=/usr/local/bin \
     PASSWORD_STORE=basic
@@ -18,7 +20,7 @@ ENV XMODIFIERS=@im=fcitx \
     GTK_IM_MODULE=fcitx \
     QT_IM_MODULE=fcitx 
 
-# 2. Package & Repository Setup
+# 2. 기본 패키지 및 저장소 설정
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -96,26 +98,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 3 Skeleton Configuration (Root)
+# 3. 기본 설정 및 스켈레톤 구성 (Root)
 RUN mkdir -p /etc/skel/.config/autostart /etc/skel/.config/fcitx \
     && echo '[Desktop Entry]\nType=Application\nExec=fcitx -dr\nHidden=false\nNoDisplay=false\nX-GNOME-Autostart-enabled=true\nName[ko_KR]=fcitx\nName=fcitx' > /etc/skel/.config/autostart/fcitx.desktop \
     && echo "[Profile]\nIMName=fcitx-hangul" > /etc/skel/.config/fcitx/profile \
     && cp -r /etc/skel/. /home/kasm-user/ \
     && chown -R kasm-user:kasm-user /home/kasm-user
 
-# 4. Chrome Sandbox/Keyring Fix
+# 4. Chrome 샌드박스 및 키링 수정
 # In containerized environments, Electron apps often need --no-sandbox and --password-store=basic
 RUN echo '#!/usr/bin/env bash\n/usr/bin/google-chrome-stable --no-sandbox --password-store=basic "$@"' > /usr/local/bin/google-chrome \
     && chmod +x /usr/local/bin/google-chrome \
     && echo '#!/usr/bin/env bash\n/usr/bin/mongodb-compass --no-sandbox "$@"' > /usr/local/bin/mongodb-compass \
     && chmod +x /usr/local/bin/mongodb-compass
 
-# 5. Startup Scripts
+# 5. 시작 스크립트 설정
 COPY startup/* /dockerstartup/
 RUN chmod +x /dockerstartup/* \
     && chown -R kasm-user:kasm-user /home/kasm-user
 
-# 6. User Permissions (DooD support & Sudo)
+# 6. 사용자 권한 설정 (DooD 지원 및 Sudo)
 RUN for gid in 999 998 989; do \
         if getent group $gid; then \
             GROUP_NAME=$(getent group $gid | cut -d: -f1); \
@@ -126,10 +128,10 @@ RUN for gid in 999 998 989; do \
         usermod -aG $GROUP_NAME kasm-user; \
     done
 
-# 7. User Permissions (Sudo)
+# 7. Sudo 권한 부여
 RUN echo "kasm-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# 8. Final Configuration
+# 8. 최종 설정 및 셸 변경
 RUN usermod -s /bin/zsh kasm-user
 
 USER kasm-user

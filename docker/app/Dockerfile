@@ -1,3 +1,7 @@
+# 크롤러 애플리케이션용 맞춤형 이미지
+# 이 Dockerfile은 uv와 Playwright(Chromium)를 활용하여 고성능 크롤링 환경을 구축합니다.
+# 멀티스테이지 빌드를 통해 최종 이미지 크기를 최적화합니다.
+
 # --- Stage 1: 빌드 단계 (Builder) ---
 FROM python:3.12-slim AS builder
 
