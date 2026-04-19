@@ -62,41 +62,72 @@ class PyTorchKRScraper(BaseScraper):
 
     def parse_content(self, html: str, url: str) -> PytorchKRContents:
         """Parses a single topic page to extract full content and metadata."""
-        # This is a simplified implementation for the TDD requirements
-        # In production, this would use the scraper's adaptive tools
+        from bs4 import BeautifulSoup
+        import re
 
-        # Extract canonical URL if available
-        url_match = re.search(r'<link rel="canonical" href="(.*?)"', html)
-        if url_match:
-            url = url_match.group(1)
+        soup = BeautifulSoup(html, 'html.parser')
 
-        title_match = re.search(r'<title>(.*?)</title>', html)
-        title = title_match.group(1) if title_match else "Unknown Title"
-        # Discourse titles usually follow "Topic Title - Category - Site Name"
+        # Extract canonical URL
+        canonical = soup.find('link', rel='canonical')
+        if canonical and canonical.get('href'):
+            url = canonical['href']
+
+        # Extract title
+        title_tag = soup.find('title')
+        title = title_tag.get_text() if title_tag else "Unknown Title"
         if " - " in title:
             title = title.split(" - ")[0]
         
         # Extract publication date
         published_at = None
-        time_match = re.search(r'datetime=[\'"]([^\'"]+)[\'"]', html)
-        if time_match:
-            published_at = time_match.group(1)
+        time_tag = soup.find('time', datetime=True)
+        if time_tag:
+            published_at = time_tag['datetime']
 
-        # Extract main text - simplified for this version
-        # Real implementation would target the .post div
-        content = "Full content extraction not implemented in this version"
-        if '<div class="post" itemprop="text">' in html:
-            # Rough extraction of the first post content
-            start = html.find('<div class="post" itemprop="text">') + len('<div class="post" itemprop="text">')
-            end = html.find('</div>', start)
-            content = html[start:end].strip()
-            # Basic HTML tag stripping to match plain text samples
-            content = re.sub(r'<[^>]+>', '', content)
+        # Extract main text
+        post_div = soup.find('div', class_='post', itemprop='text')
+        if post_div:
+            # Handle lightbox wrappers specifically to match sample output
+            for lb in post_div.find_all('div', class_='lightbox-wrapper'):
+                img = lb.find('img')
+                alt = img.get('alt', '') if img else ''
+                info = lb.find('span', class_='informations')
+                info_text = info.get_text() if info else ""
+                
+                parts = []
+                # Only keep alt text if it's different from the title
+                if alt and alt != title:
+                    parts.append(alt)
+                if info_text:
+                    parts.append(info_text)
+                
+                lb.replace_with('\n'.join(parts))
+
+            # Handle other images (like emojis)
+            for img in post_div.find_all('img'):
+                alt = img.get('alt', '')
+                if alt.startswith(':'): # Emojis
+                    img.decompose()
+                elif alt and alt != title:
+                    img.replace_with(alt)
+                else:
+                    img.decompose()
+            
+            # Get text with normalized whitespace
+            raw_text = post_div.get_text(separator='\n')
+            lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+            content_text = '\n'.join(lines)
+            
+            # The expected output starts with the title
+            content = f"{title}\n{content_text}"
+        else:
+            content = "Full content extraction not implemented in this version"
 
         return PytorchKRContents(
             title=title,
             url=url,
             source=self.source_name,
             content=content,
-            published_at=published_at
+            published_at=published_at,
+            html=html
         )
