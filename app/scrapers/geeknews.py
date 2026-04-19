@@ -154,9 +154,12 @@ class GeekNewsScraper(BaseScraper):
         for child in children:
             self._process_json_ld_comment(child, comments)
 
-    def _get_backfill_url(self, base_url: str, date_str: str, page: int = None) -> str:
+    def _get_backfill_url(self, base_url: str, date_str: str = None, page: int = None) -> str:
         """Constructs the target URL for backfilling based on date/page patterns."""
         base = base_url.rstrip('/')
+        if date_str is None: 
+            return f"{base}/"
+        
         if date_str == 'comments':
             return f"{base}/comments?page={page}" if page else f"{base}/comments"
         if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):

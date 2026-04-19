@@ -7,7 +7,6 @@ It handles data validation, type hinting, and serialization for collected news a
 Main Models:
 - GeekNewsList: Main model for news articles. Includes title, URL, source, content, publication date, and associated comments.
 - GeekNewsContents: Sub-model for individual comments. Manages author, text, unique ID, and timestamps.
-- PytorchKRContents: Specialized model for PyTorch KR content.
 
 Key Features:
 1. Pydantic v2: Utilizes high-performance data validation and JSON transformation.
@@ -44,8 +43,7 @@ class PytorchKRContents(BaseModel):
     title: str = Field(..., description="Title of the topic")
     url: str = Field(..., description="Original URL of the topic")
     source: str = Field(..., description="Source of the news")
-    published_at: Optional[datetime] = Field(None, description="Publication timestamp")
+    published_at: Optional[str] = Field(None, description="Publication timestamp")
     content: Optional[str] = Field(None, description="Main content of the topic")
-    comments: Optional[List[GeekNewsContents]] = Field(default_factory=list, description="List of collected comments")
     html: Optional[str] = Field(None, description="Original raw HTML of the page")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Collection timestamp (UTC)")

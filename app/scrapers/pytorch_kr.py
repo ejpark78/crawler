@@ -15,10 +15,13 @@ PyTorch KR 스크레이퍼 모듈
 """
 import json
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from app.models import PytorchKRContents
 from app.scrapers.base import BaseScraper
 import re
+from curl_cffi import requests
+from bs4 import BeautifulSoup
+
 
 logger = logging.getLogger("PyTorchKRScraper")
 
@@ -34,7 +37,6 @@ class PyTorchKRScraper(BaseScraper):
 
     def _do_fetch(self, url: str) -> str:
         """Fetches URL using curl-cffi with Chrome impersonation."""
-        from curl_cffi import requests
         try:
             response = requests.get(url, impersonate="chrome", timeout=30)
             response.raise_for_status()
@@ -43,7 +45,7 @@ class PyTorchKRScraper(BaseScraper):
             logger.error(f"Network error while fetching {url}: {e}")
             return ""
 
-    def _get_backfill_url(self, base_url: str, date_str: str, page: Optional[int] = None) -> str:
+    def _get_backfill_url(self, base_url: str, date_str: str = None, page: int = None) -> str:
         # PyTorchKR's JSON API uses page parameters.
         # Date-based filtering is usually done on the client side or via search.
         # For the purpose of this implementation, we support page-based pagination.
@@ -67,8 +69,22 @@ class PyTorchKRScraper(BaseScraper):
             topics = data.get('topic_list', {}).get('topics', [])
             logger.info(f"Found {len(topics)} topics in the list.")
 
+            if db_connection is not None:
+                collection_list = db_connection[self.db_name][self.collection_list]
+                collection_contents = db_connection[self.db_name][self.collection_contents]
+            else:
+                collection_list = None
+                collection_contents = None
+
             for topic in topics:
                 try:
+                    if collection_list is not None:
+                        collection_list.update_one(
+                            {"_id": f"{topic.get('slug')}_{topic.get('id')}"},
+                            {"$set": topic},
+                            upsert=True
+                        )
+
                     title = topic.get('title')
                     # Construct topic URL
                     topic_id = topic.get('id')
@@ -76,7 +92,6 @@ class PyTorchKRScraper(BaseScraper):
                     if not (topic_id and slug): continue
                     
                     url = f"https://discuss.pytorch.kr/t/{slug}/{topic_id}"
-                    
                     logger.info(f"Processing topic: {title} ({url})...")
                     
                     # 1. Fetch detail page
@@ -89,13 +104,20 @@ class PyTorchKRScraper(BaseScraper):
                     item = self.parse_content(detail_html, url)
                     
                     # 3. Persistence (DB & Local)
-                    self.save(item, db_connection, detail_html)
+                    if collection_contents is not None:
+                        doc = item.model_dump(mode='json')
+                        collection_contents.update_one(
+                            {"_id": f"{topic.get('slug')}_{topic.get('id')}"},
+                            {"$set": {**topic, 'contents': doc}},
+                            upsert=True
+                        )
+
+                    if getattr(self, 'debug_path', None):
+                        self._save_to_file(item)
                     items.append(item)
-                    
                 except Exception as e:
                     logger.error(f"Error processing topic {topic.get('id')}: {e}")
                     continue
-                    
         except json.JSONDecodeError:
             logger.error("Failed to decode JSON from PyTorchKR list response")
         except Exception as e:
@@ -105,9 +127,6 @@ class PyTorchKRScraper(BaseScraper):
 
     def parse_content(self, html: str, url: str) -> PytorchKRContents:
         """Parses a single topic page to extract full content and metadata."""
-        from bs4 import BeautifulSoup
-        import re
-
         soup = BeautifulSoup(html, 'html.parser')
 
         # Extract canonical URL

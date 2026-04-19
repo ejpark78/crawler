@@ -42,5 +42,17 @@ docker run --rm -v .:/app -w /app \
 
 uv run python scratch/test_parsing.py
 
+
+
+for page in {2..10}; do 
+   echo "# Page: $page"; 
+   docker compose run --rm -v .:/app -w /app \
+      worker uv run python -m app.main \
+      --source PyTorchKR --page $page
+
+   echo "# Page: $page DONE"
+done
+
+
 ```
 

@@ -195,15 +195,14 @@ class BaseScraper(ABC):
         if not target_url:
             raise ValueError(f"No target URL provided for {self.source_name}")
 
-        if backfill_date:
-            logger.info(f"Backfilling data for date: {backfill_date}, page: {page}")
-            target_url = self._get_backfill_url(target_url, backfill_date, page=page)
+        target_url = self._get_backfill_url(target_url, backfill_date, page=page)
+        logger.info(f"Target URL: {target_url}, date: {backfill_date}, page: {page}")
 
         html = self.fetch(target_url)
         items = self.parse(html, db_connection=db_connection)
         logger.info(f"Successfully collected {len(items)} items from {self.source_name}.")
         return items, html
 
-    def _get_backfill_url(self, base_url: str, date_str: str, page: Optional[int] = None) -> str:
-        """Constructs backfill URLs based on date and page (Overridden by subclasses)."""
-        return base_url
+    # def _get_backfill_url(self, base_url: str, date_str: str, page: Optional[int] = None) -> str:
+    #     """Constructs backfill URLs based on date and page (Overridden by subclasses)."""
+    #     return base_url
