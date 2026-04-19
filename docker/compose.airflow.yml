@@ -68,6 +68,8 @@ services:
       retries: 5
 
   pgadmin:
+    profiles:
+      - pg-ui
     image: dpage/pgadmin4
     restart: unless-stopped
     environment:

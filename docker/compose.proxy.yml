@@ -22,13 +22,6 @@ services:
       - "traefik.http.routers.traefik_dash.entrypoints=web"
     networks:
       - airflow-net
-    # depends_on:
-    #   airflow:
-    #     condition: service_healthy
-    #   pgadmin:
-    #     condition: service_healthy
-    #   mongo-express:
-    #     condition: service_healthy
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s

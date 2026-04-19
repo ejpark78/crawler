@@ -2,15 +2,17 @@ FROM kasmweb/core-ubuntu-noble:1.18.0
 USER root
 
 # 1. Environment variables
-ENV UV_INSTALL_DIR=/usr/local/bin \
-    DEBIAN_FRONTEND=noninteractive \
-    PASSWORD_STORE=basic \
-    XMODIFIERS=@im=fcitx \
+ENV DEBIAN_FRONTEND=noninteractive \
+    UV_INSTALL_DIR=/usr/local/bin \
+    PASSWORD_STORE=basic
+
+ENV XMODIFIERS=@im=fcitx \
     GTK_IM_MODULE=fcitx \
     QT_IM_MODULE=fcitx 
 
 # 2. Package & Repository Setup
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     curl \
     ca-certificates \
     gnupg \
@@ -51,6 +53,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dbus-x11 \
     # External Repositories
     && install -m 0755 -d /etc/apt/keyrings \
+    # uv
+    && curl -LsSf https://astral.sh/uv/install.sh | bash - \
+    # Node.js (20.x)
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get update && apt-get install -y --no-install-recommends nodejs \
     # Google Chrome (via .deb)
     && wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
     && apt-get install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb \
@@ -66,6 +73,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && wget -q https://compass.mongodb.com/api/v2/download/latest/compass/stable/linux_deb -O mongodb-compass.deb \
     && apt-get install -y --no-install-recommends ./mongodb-compass.deb \
     && rm mongodb-compass.deb \
+    # Docker CLI
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list \
+    && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
+    # Antigravity
+    && curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | gpg --dearmor --yes -o /etc/apt/keyrings/antigravity-repo-key.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" > /etc/apt/sources.list.d/antigravity.list \
+    && apt-get update && apt-get install -y --no-install-recommends antigravity \
     # Setup Locales (Korean & English)
     && locale-gen ko_KR.UTF-8 en_US.UTF-8 \
     && update-locale LANG=ko_KR.UTF-8 \
@@ -73,21 +88,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. Korean Input configurations
-USER kasm-user
-WORKDIR /home/kasm-user
-
-# 3.1 Install Oh My Zsh
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
-    && git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions \
-    && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
-    && sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/' ~/.zshrc
-
-# 3.2 Fcitx Setup (User)
-RUN im-config -n fcitx
-
-USER root
-# 3.2 Skeleton Configuration (Root)
+# 3 Skeleton Configuration (Root)
 RUN mkdir -p /etc/skel/.config/autostart /etc/skel/.config/fcitx \
     && echo '[Desktop Entry]\nType=Application\nExec=fcitx -dr\nHidden=false\nNoDisplay=false\nX-GNOME-Autostart-enabled=true\nName[ko_KR]=fcitx\nName=fcitx' > /etc/skel/.config/autostart/fcitx.desktop \
     && echo "[Profile]\nIMName=fcitx-hangul" > /etc/skel/.config/fcitx/profile \
@@ -101,18 +102,30 @@ RUN echo '#!/usr/bin/env bash\n/usr/bin/google-chrome-stable --no-sandbox --pass
     && echo '#!/usr/bin/env bash\n/usr/bin/mongodb-compass --no-sandbox "$@"' > /usr/local/bin/mongodb-compass \
     && chmod +x /usr/local/bin/mongodb-compass
 
-# 4. Project Directory Structure & Startup Scripts
-COPY custom_startup.sh /dockerstartup/custom_startup.sh
-RUN chmod +x /dockerstartup/custom_startup.sh \
-    && mkdir -p /home/kasm-user/project/docs/history /home/kasm-user/project/docs/plans \
+# 5. Startup Scripts
+COPY startup/* /dockerstartup/
+RUN chmod +x /dockerstartup/* \
     && chown -R kasm-user:kasm-user /home/kasm-user
 
-# 5. User Permissions (Sudo)
+# 6. User Permissions (DooD support & Sudo)
+RUN for gid in 999 998 989; do \
+        if getent group $gid; then \
+            GROUP_NAME=$(getent group $gid | cut -d: -f1); \
+        else \
+            GROUP_NAME="docker_host_${gid}"; \
+            groupadd -g $gid $GROUP_NAME; \
+        fi; \
+        usermod -aG $GROUP_NAME kasm-user; \
+    done
+
+# 7. User Permissions (Sudo)
 RUN echo "kasm-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# 6. Final Configuration
+# 8. Final Configuration
 RUN usermod -s /bin/zsh kasm-user
 
 USER kasm-user
-WORKDIR /home/kasm-user
 
+RUN im-config -n fcitx
+
+WORKDIR /home/kasm-user
