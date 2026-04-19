@@ -15,6 +15,9 @@
 * **서비스 쉘 접속**: `make airflow-bash`, `make worker-bash`
 * **Airflow 계정 초기화**: `make reset-pw`
 * **코드 포맷팅**: `docker compose exec worker uv run isort . && docker compose exec worker uv run black .`
+* **테스트 골든 세트 생성**:
+    *   `docker compose run --rm -v .:/app -e PYTHONPATH=. worker uv run python scripts/pytorch_kr_golden_sets.py`
+    *   `docker compose run --rm -v .:/app -e PYTHONPATH=. worker uv run python scripts/geeknews_golden_sets.py`
 
 # 🧪 TDD & Quality Assurance
 1. **Test-First**: 코드 구현 전 `pytest`와 `pytest-vcr`를 사용하여 각 소스별 파싱 로직 테스트를 먼저 작성함.
@@ -26,7 +29,8 @@
 1. **Abstract Base Class**: `BaseScraper`를 정의하여 모든 크롤러의 `fetch`, `parse`, `save`, `save_to_json`, `collect_sample_html` 인터페이스를 표준화.
 2. **Registry Pattern**: `app/scrapers/registry.py`를 통해 구현된 스크레이퍼들을 동적으로 관리하고 로드함.
 3. **Target Sources**:
-    - **GeekNews**: `https://news.hada.io/` (구현 완료: 제목, URL, 요약, 댓글 수집, 날짜/페이지 기반 백필, 최신 댓글 리스트 수집 지원)
+    - **GeekNews**: `https://news.hada.io/` (구현 완료: 제목, URL, 요약, 댓글 수집, 날짜/페이지 기반 백필 지원)
+    - **PyTorch KR**: `https://discuss.pytorch.kr/` (구현 완료: BeautifulSoup 기반 상세 본문 추출, 이미지/라이트박스 처리, 테스트 골든 세트 구축 완료)
     - **AI News**: `https://www.ainews.com/`
     - **Daily Dose of DS**: `https://www.dailydoseofds.com/archive/`
     - **DEVOCEAN**: `https://devocean.sk.com/tech`
@@ -57,7 +61,8 @@
 - `app/models.py`: Pydantic 뉴스 및 댓글 데이터 모델
 - `app/scrapers/base.py`: 추상 인터페이스 및 공통 유틸리티
 - `app/scrapers/registry.py`: 스크레이퍼 등록 및 관리 로직
-- `app/scrapers/{geeknews, ...}.py`: 소스별 구현체
+- `app/scrapers/{geeknews, pytorch_kr}.py`: 소스별 구현체
+- `scripts/`: 테스트 데이터 생성 및 관리 자동화 스크립트
 - `tests/`: 소스별 유닛 테스트 코드 및 `tests/site/{source}/` 샘플 데이터
 - `dags/`: Airflow DAG 정의
 - `compose.yml`: 메인 설정 (모듈형 include 구조)
@@ -69,9 +74,10 @@
 
 # 🏗️ 작업 단계 (TDD Workflow)
 1. **Model & Test**: Pydantic 모델 정의 및 실패하는 파싱 테스트 작성.
-2. **Green Logic**: 테스트를 통과하기 위한 최소한의 Scrapling 파싱 코드 구현.
-3. **Refactor**: 중복 제거 및 추상화 고도화.
-4. **Deploy**: Docker Compose 가동 및 Airflow 스케줄링 확인.
+2. **Green Logic**: 테스트를 통과하기 위한 최소한의 Scrapling/BeautifulSoup 파싱 코드 구현.
+3. **Golden Record**: `scripts/` 내 스크립트를 실행하여 실제 파싱 결과를 JSON 기대값으로 고착화.
+4. **Refactor**: 중복 제거 및 추상화 고도화.
+5. **Deploy**: Docker Compose 가동 및 Airflow 스케줄링 확인.
 
 # ⚠️ Constraints
 - **Environment Isolation**: 모든 실행은 반드시 `uv run` 환경 내에서 이루어져야 하며, 호스트 환경의 Python 패키지 의존성과 격리되어야 함.
