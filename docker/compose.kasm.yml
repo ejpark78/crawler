@@ -31,6 +31,7 @@ services:
     volumes:
       - ${VOLUME_PATH}/kasm:/mnt
       - ${VOLUME_PATH}/kasm/home:/home/kasm-user
+      - /home/ejpark/workspace:/home/kasm-user/workspace
       - /var/run/docker.sock:/var/run/docker.sock
     labels:
       - "traefik.enable=true"

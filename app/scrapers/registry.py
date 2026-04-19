@@ -10,6 +10,8 @@ which also determines the name of the MongoDB database used for data isolation.
 """
 from app.scrapers.geeknews import GeekNewsScraper
 from app.scrapers.pytorch_kr import PyTorchKRScraper
+from app.scrapers.gpters import GPTERSScraper
+
 
 # Mapping between Source Names and Scraper Classes
 # Key: Source identifier used in CLI or DAGs (Case-Sensitive)
@@ -17,4 +19,6 @@ from app.scrapers.pytorch_kr import PyTorchKRScraper
 SCRAPER_REGISTRY = {
     "GeekNews": GeekNewsScraper,
     "PyTorchKR": PyTorchKRScraper,
+    "GPTERS": GPTERSScraper,
 }
+

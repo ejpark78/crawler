@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv init *)",
+      "Bash(uv add *)",
+      "Bash(uv run *)",
+      "Bash(curl *)",
+      "Bash(docker compose *)",
+      "Bash(docker compose exec app uv run python -c ' *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(python3 *)",
+      "Bash(docker network ls *)",
+      "Bash(git pull *)",
+      "WebSearch"
+    ]
+  }
+}
