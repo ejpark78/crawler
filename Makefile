@@ -25,7 +25,7 @@ PAGE ?= 1
 START_DATE ?= 2026-04-11
 END_DATE ?= 2026-04-17
 DAG_ID = geeknews
-OUT_PATH ?= /app/volumes/debuging/$(shell date +"%Y-%m-%d_%H%M")/$(SOURCE)_$(DATE)_$(PAGE)
+OUT_PATH ?= /app/volumes/debug/$(shell date +"%Y-%m-%d_%H%M")/$(SOURCE)_$(DATE)_$(PAGE)
 LOG_LEVEL ?= INFO
 
 .PHONY: *
@@ -74,8 +74,9 @@ test:
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
 
-# Example: make test-docker DATE=2026-04-18 PAGE=1 LOG_LEVEL=DEBUG
-test-docker:
+# Example: make debug SOURCE=GeekNews DATE=2026-04-18 PAGE=1 LOG_LEVEL=DEBUG
+# Example: make debug SOURCE=PyTorchKR DATE=2026-04-18 PAGE=1 LOG_LEVEL=DEBUG
+debug:
 	docker run --rm -v .:/app -w /app \
 		-e LOG_LEVEL=$(LOG_LEVEL) \
 		crawler/worker:latest \
@@ -106,7 +107,7 @@ run:
 	done
 
 # --- Airflow ---
-# Example: make backfill START_DATE=2025-01-01 END_DATE=2025-09-04
+# Example: make backfill START_DATE=2025-01-01 END_DATE=2025-08-20
 backfill:
 	@current_date=$(END_DATE); \
 	until [[ "$$current_date" < "$(START_DATE)" ]]; do \

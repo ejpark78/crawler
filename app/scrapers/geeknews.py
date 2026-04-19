@@ -57,7 +57,7 @@ class GeekNewsScraper(BaseScraper):
 
         collection = None
         if db_connection is not None:
-            collection = db_connection[self.db_name][self.collection_name]
+            collection = db_connection[self.db_name][self.collection_html]
 
         rows = soup.select('div.topic_row')
         for row in rows:

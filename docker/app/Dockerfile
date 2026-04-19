@@ -17,7 +17,8 @@ RUN apt-get update && apt-get install -y \
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-cache
 
-# Install Chromium via playwright (it handles the binary download)
+# Install Chromium via playwright in a specific path outside /app to avoid shadowing
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN uv run playwright install chromium
 
 # --- Stage 2: Final ---
@@ -36,11 +37,13 @@ RUN apt-get update && apt-get install -y \
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Copy virtualenv from builder
+# Copy virtualenv and browsers from builder
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /ms-playwright /ms-playwright
 
 # Set environment paths to use the virtualenv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 COPY . .
 

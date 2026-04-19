@@ -1,3 +1,18 @@
+"""
+PyTorch KR 스크레이퍼 모듈
+
+이 모듈은 PyTorch 한국 사용자 모임(https://discuss.pytorch.kr)의 게시글을 수집하기 위한 
+전문 크롤러를 구현합니다. Discourse 기반의 포럼 구조를 처리합니다.
+
+주요 기능:
+1. JSON API 연동: 최신 게시글 목록을 추출하기 위해 사이트의 전용 JSON 엔드포인트를 활용합니다.
+2. BeautifulSoup 기반 상세 파싱: 게시글 본문의 복잡한 HTML 구조를 분석하여 정규화된 텍스트를 추출합니다.
+3. 특수 요소 처리: 
+   - 이미지 라이트박스(Lightbox) 구조에서 메타데이터를 추출하고 텍스트로 변환합니다.
+   - 본문 내 이미지를 알트(Alt) 텍스트로 치환하거나 불필요한 이모지를 제거합니다.
+   - 제목을 본문에 포함시켜 문서의 맥락을 보존합니다.
+4. 테스트 기반 검증: 수집된 실제 HTML 샘플과 골든 레코드(JSON)를 비교하여 파싱 정확도를 보장합니다.
+"""
 import json
 import logging
 from typing import List, Optional, Tuple
@@ -18,8 +33,15 @@ class PyTorchKRScraper(BaseScraper):
         self.base_url = "https://discuss.pytorch.kr/latest.json"
 
     def _do_fetch(self, url: str) -> str:
-        # For PyTorchKR, we use StealthyFetcher's internal fetch logic
-        return self.crawler.fetch(url).text
+        """Fetches URL using curl-cffi with Chrome impersonation."""
+        from curl_cffi import requests
+        try:
+            response = requests.get(url, impersonate="chrome", timeout=30)
+            response.raise_for_status()
+            return response.text
+        except Exception as e:
+            logger.error(f"Network error while fetching {url}: {e}")
+            return ""
 
     def _get_backfill_url(self, base_url: str, date_str: str, page: Optional[int] = None) -> str:
         # PyTorchKR's JSON API uses page parameters.
@@ -30,33 +52,54 @@ class PyTorchKRScraper(BaseScraper):
         return f"{url}?no_definitions=true&page={page_val}"
 
     def parse(self, html: str, db_connection=None) -> List[PytorchKRContents]:
-        """Parses JSON or HTML from PyTorchKR."""
+        """Parses JSON list from PyTorchKR and fetches/parses each topic detail."""
         items = []
 
         # Determine if content is JSON or HTML
         trimmed_html = html.strip()
-        if trimmed_html.startswith('{'):
-            try:
-                data = json.loads(trimmed_html)
-                topics = data.get('topic_list', {}).get('topics', [])
-                for topic in topics:
-                    # Use a dict to build the item to avoid passing None to created_at
-                    item_data = {
-                        "title": topic.get('title'),
-                        "url": f"https://discuss.pytorch.kr/t/{topic.get('slug')}/{topic.get('id')}",
-                        "source": self.source_name,
-                        "content": f"Posts: {topic.get('posts_count')}, Replies: {topic.get('reply_count')}",
-                    }
-                    if topic.get('created_at'):
-                        item_data["published_at"] = topic.get('created_at')
+        if not trimmed_html.startswith('{'):
+            logger.error(f"PyTorchKR parse expected JSON list but received: {trimmed_html[:100]}...")
+            return []
+
+        try:
+            data = json.loads(trimmed_html)
+            # Discourse API structure: topics are usually under topic_list.topics
+            topics = data.get('topic_list', {}).get('topics', [])
+            logger.info(f"Found {len(topics)} topics in the list.")
+
+            for topic in topics:
+                try:
+                    title = topic.get('title')
+                    # Construct topic URL
+                    topic_id = topic.get('id')
+                    slug = topic.get('slug')
+                    if not (topic_id and slug): continue
                     
-                    item = PytorchKRContents(**item_data)
+                    url = f"https://discuss.pytorch.kr/t/{slug}/{topic_id}"
+                    
+                    logger.info(f"Processing topic: {title} ({url})...")
+                    
+                    # 1. Fetch detail page
+                    detail_html = self.fetch(url)
+                    if not detail_html:
+                        logger.warning(f"Failed to fetch detail for: {url}")
+                        continue
+                        
+                    # 2. Parse detail page
+                    item = self.parse_content(detail_html, url)
+                    
+                    # 3. Persistence (DB & Local)
+                    self.save(item, db_connection, detail_html)
                     items.append(item)
-            except json.JSONDecodeError:
-                logger.error("Failed to parse JSON response")
-        else:
-            # Basic HTML parsing for content pages handled in parse_content
-            pass
+                    
+                except Exception as e:
+                    logger.error(f"Error processing topic {topic.get('id')}: {e}")
+                    continue
+                    
+        except json.JSONDecodeError:
+            logger.error("Failed to decode JSON from PyTorchKR list response")
+        except Exception as e:
+            logger.error(f"Unexpected error in PyTorchKR.parse: {e}")
 
         return items
 
