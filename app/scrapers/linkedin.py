@@ -43,7 +43,7 @@ from linkedin_scraper import BrowserManager
 from app.scrapers.base import BaseScraper
 
 
-class LinkedInFeedScraper(BaseScraper):
+class LinkedInScraper(BaseScraper):
     def __init__(self, base_dir="volumes/linkedin", headless=None, total_scrolls=30, db_connection=None):
         super().__init__(source_name="LinkedIn")
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -577,7 +577,7 @@ if __name__ == "__main__":
         client = None
         print("⚠️ MongoDB 연결 실패 (로컬 모드)")
 
-    scraper = LinkedInFeedScraper(total_scrolls=ts, db_connection=client)
+    scraper = LinkedInScraper(total_scrolls=ts, db_connection=client)
     try:
         asyncio.run(scraper.run())
     except KeyboardInterrupt:

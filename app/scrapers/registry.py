@@ -11,7 +11,7 @@ which also determines the name of the MongoDB database used for data isolation.
 from app.scrapers.geeknews import GeekNewsScraper
 from app.scrapers.pytorch_kr import PyTorchKRScraper
 from app.scrapers.gpters import GPTERSScraper
-from app.scrapers.linkedin import LinkedInFeedScraper
+from app.scrapers.linkedin import LinkedInScraper
 
 
 # Mapping between Source Names and Scraper Classes
@@ -21,6 +21,6 @@ SCRAPER_REGISTRY = {
     "GeekNews": GeekNewsScraper,
     "PyTorchKR": PyTorchKRScraper,
     "GPTERS": GPTERSScraper,
-    "LinkedIn": LinkedInFeedScraper,
+    "LinkedIn": LinkedInScraper,
 }
 
