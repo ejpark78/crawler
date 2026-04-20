@@ -18,6 +18,7 @@
 * **테스트 골든 세트 생성**:
     *   `docker compose run --rm -v .:/app -e PYTHONPATH=. worker uv run python scripts/pytorch_kr_golden_sets.py`
     *   `docker compose run --rm -v .:/app -e PYTHONPATH=. worker uv run python scripts/geeknews_golden_sets.py`
+    *   `docker compose run --rm -v .:/app -e PYTHONPATH=. worker uv run python scripts/gpters_goledn_sets.py`
 
 # 🧪 TDD & Quality Assurance
 1. **Test-First**: 코드 구현 전 `pytest`와 `pytest-vcr`를 사용하여 각 소스별 파싱 로직 테스트를 먼저 작성함.
@@ -31,10 +32,11 @@
 3. **Target Sources**:
     - **GeekNews**: `https://news.hada.io/` (구현 완료: 제목, URL, 요약, 댓글 수집, 날짜/페이지 기반 백필 지원)
     - **PyTorch KR**: `https://discuss.pytorch.kr/` (구현 완료: BeautifulSoup 기반 상세 본문 추출, 이미지/라이트박스 처리, 테스트 골든 세트 구축 완료)
+    - **LinkedIn**: (구현 완료: 피드 기반 뉴스 수집 및 비동기 실행 지원)
+    - **GPTERS**: `https://www.gpters.org/` (구현 중)
     - **AI News**: `https://www.ainews.com/`
     - **Daily Dose of DS**: `https://www.dailydoseofds.com/archive/`
     - **DEVOCEAN**: `https://devocean.sk.com/tech`
-    - **GPTERS**: `https://www.gpters.org/`
     - **Hacker News**: `https://news.ycombinator.com/`
     - **Reddit AI News**: `https://www.reddit.com/r/AINews/`
     - **Reddit ArtificialInteligence**: `https://www.reddit.com/r/ArtificialInteligence/`
@@ -61,7 +63,7 @@
 - `app/models.py`: Pydantic 뉴스 및 댓글 데이터 모델
 - `app/scrapers/base.py`: 추상 인터페이스 및 공통 유틸리티
 - `app/scrapers/registry.py`: 스크레이퍼 등록 및 관리 로직
-- `app/scrapers/{geeknews, pytorch_kr}.py`: 소스별 구현체
+- `app/scrapers/{geeknews, pytorch_kr, linkedin, gpters}.py`: 소스별 구현체
 - `scripts/`: 테스트 데이터 생성 및 관리 자동화 스크립트
 - `tests/`: 소스별 유닛 테스트 코드 및 `tests/site/{source}/` 샘플 데이터
 - `dags/`: Airflow DAG 정의
