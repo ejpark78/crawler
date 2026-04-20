@@ -41,7 +41,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="linkedin_feed",
+    dag_id="linkedin",
     default_args=default_args,
     start_date=days_ago(1),
     schedule_interval="@daily",
