@@ -97,18 +97,26 @@ class LinkedInScraper(BaseScraper):
         coll = db["config"]
         
         files = {
-            "linkedin/config/session.json": self.session_file,
-            "linkedin/config/followers.json": self.followers_file
+            "session": self.session_file,
+            "followers": self.followers_file
         }
         
         for key, path in files.items():
             if direction == "load":
                 # DB에서 읽어와 로컬 파일 갱신
-                doc = coll.find_one({"_id": key})
-                if doc and doc.get("data"):
-                    print(f"🔄 DB에서 {key} 설정을 로드합니다.")
-                    with open(path, "w", encoding="utf-8") as f:
-                        json.dump(doc["data"], f, ensure_ascii=False, indent=2)
+                try:
+                    doc = coll.find_one({"_id": key})
+                    if doc and doc.get("data"):
+                        print(f"🔄 DB에서 {key} 설정을 로드합니다.")
+                        with open(path, "w", encoding="utf-8") as f:
+                            json.dump(doc["data"], f, ensure_ascii=False, indent=2)
+                    else:
+                        if os.path.exists(path):
+                            print(f"ℹ️ DB에 {key} 설정이 없어 기존 로컬 파일을 사용합니다.")
+                        else:
+                            print(f"⚠️ DB와 로컬 모두에 {key} 설정이 없습니다.")
+                except Exception as e:
+                    print(f"⚠️ {key} 설정 로드 중 오류: {e}")
             else:
                 # 로컬 파일 읽어서 DB 갱신
                 if os.path.exists(path):
@@ -121,7 +129,8 @@ class LinkedInScraper(BaseScraper):
                             upsert=True
                         )
                         print(f"💾 DB에 {key} 설정을 백업했습니다.")
-                    except: pass
+                    except Exception as e:
+                        print(f"⚠️ {key} 설정 백업 중 오류: {e}")
 
     async def run(self, db_connection=None, backfill_date=None, page=None):
         if db_connection:
