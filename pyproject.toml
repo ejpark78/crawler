@@ -8,6 +8,7 @@ dependencies = [
     "beautifulsoup4>=4.14.3",
     "browserforge>=1.2.4",
     "curl-cffi>=0.15.0",
+    "linkedin-scraper>=3.1.2",
     "msgspec>=0.21.1",
     "patchright>=1.58.2",
     "playwright>=1.58.0",
