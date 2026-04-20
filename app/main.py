@@ -18,6 +18,8 @@ import argparse
 import logging
 import os
 import sys
+import asyncio
+import inspect
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 from app.scrapers.registry import SCRAPER_REGISTRY
@@ -90,11 +92,18 @@ def main():
 
     try:
         # Execution
-        items, _ = scraper.run(
+        run_result = scraper.run(
             db_connection=db_conn,
             backfill_date=args.date,
             page=args.page
         )
+        
+        # Handle both sync and async scrapers
+        if inspect.iscoroutine(run_result):
+            items, _ = asyncio.run(run_result)
+        else:
+            items, _ = run_result
+            
         # Output result for Airflow XCom capture
         print(f"RESULT_COUNT: {len(items)}")
     finally:

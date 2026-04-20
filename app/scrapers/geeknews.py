@@ -42,14 +42,6 @@ class GeekNewsScraper(BaseScraper):
             logger.error(f"Network error while fetching {url}: {e}")
             return ""
 
-    def scrape(self, date_str: str = "1", db_connection=None) -> List[GeekNewsList]:
-        """Executes the GeekNews scraping process."""
-        url = self._get_backfill_url(self.base_url, date_str)
-        html = self.fetch(url)
-        if not html:
-            return []
-        return self.parse(html, db_connection=db_connection)
-
     def parse(self, html: str, db_connection=None) -> List[GeekNewsList]:
         """Parses the GeekNews list page."""
         soup = BeautifulSoup(html, 'html.parser')

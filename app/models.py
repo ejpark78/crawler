@@ -47,3 +47,15 @@ class PytorchKRContents(BaseModel):
     content: Optional[str] = Field(None, description="토픽의 주요 내용")
     html: Optional[str] = Field(None, description="페이지의 원본 raw HTML")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="수집 타임스탬프 (UTC)")
+
+class GPTERSNews(BaseModel):
+    """지피터스 뉴스 항목을 위한 데이터 모델."""
+    title: str = Field(..., description="뉴스 제목")
+    url: str = Field(..., description="뉴스 원본 URL")
+    author: Optional[str] = Field(None, description="작성자")
+    short_content: Optional[str] = Field(None, description="본문 요약")
+    published_at: Optional[datetime] = Field(None, description="발행일")
+    reactions_count: int = Field(0, description="반응 수")
+    replies_count: int = Field(0, description="댓글 수")
+    html: Optional[str] = Field(None, description="원본 JSON 응답 데이터")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="수집 타임스탬프 (UTC)")

@@ -203,7 +203,3 @@ class BaseScraper(ABC):
         items = self.parse(html, db_connection=db_connection)
         logger.info(f"Successfully collected {len(items)} items from {self.source_name}.")
         return items, html
-
-    # def _get_backfill_url(self, base_url: str, date_str: str, page: Optional[int] = None) -> str:
-    #     """Constructs backfill URLs based on date and page (Overridden by subclasses)."""
-    #     return base_url

@@ -40,10 +40,14 @@ import json
 from datetime import datetime
 from linkedin_scraper import BrowserManager
 
+from app.scrapers.base import BaseScraper
 
-class LinkedInFeedScraper:
-    def __init__(self, base_dir="volumes/linkedin", headless=None, total_scrolls=30):
+
+class LinkedInFeedScraper(BaseScraper):
+    def __init__(self, base_dir="volumes/linkedin", headless=None, total_scrolls=30, db_connection=None):
+        super().__init__(source_name="LinkedIn")
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.db_conn = db_connection
         
         # 도커/환경 변수 설정
         self.is_docker = os.getenv("DOCKER_MODE", "false").lower() == "true"
@@ -77,8 +81,56 @@ class LinkedInFeedScraper:
         for d in [self.html_dir, self.contents_dir]:
             os.makedirs(d, exist_ok=True)
 
-    async def run(self):
+    def _do_fetch(self, url: str) -> str:
+        """LinkedIn은 브라우저 세션을 사용하므로 개별 fetch 대신 run에서 처리합니다."""
+        return ""
+
+    def parse(self, html: str, db_connection=None):
+        """LinkedIn은 동적 페이지이므로 _extract_current_view에서 실시간 파싱을 수행합니다."""
+        return []
+
+    async def _sync_config_with_db(self, direction="load"):
+        """MongoDB와 로컬 파일(session, followers) 동기화"""
+        if not self.db_conn: return
+        
+        db = self.db_conn["linkedin"]
+        coll = db["config"]
+        
+        files = {
+            "linkedin/config/session.json": self.session_file,
+            "linkedin/config/followers.json": self.followers_file
+        }
+        
+        for key, path in files.items():
+            if direction == "load":
+                # DB에서 읽어와 로컬 파일 갱신
+                doc = coll.find_one({"_id": key})
+                if doc and doc.get("data"):
+                    print(f"🔄 DB에서 {key} 설정을 로드합니다.")
+                    with open(path, "w", encoding="utf-8") as f:
+                        json.dump(doc["data"], f, ensure_ascii=False, indent=2)
+            else:
+                # 로컬 파일 읽어서 DB 갱신
+                if os.path.exists(path):
+                    try:
+                        with open(path, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        coll.update_one(
+                            {"_id": key},
+                            {"$set": {"data": data, "updated_at": datetime.now()}},
+                            upsert=True
+                        )
+                        print(f"💾 DB에 {key} 설정을 백업했습니다.")
+                    except: pass
+
+    async def run(self, db_connection=None, backfill_date=None, page=None):
+        if db_connection:
+            self.db_conn = db_connection
+            
         print(f"🚀 LinkedIn Scraper 엔진 시작 (ID: {self.run_id})")
+        
+        # 시작 전 DB에서 설정 로드
+        await self._sync_config_with_db(direction="load")
         
         async with BrowserManager(headless=self.headless) as browser:
             self.browser = browser
@@ -106,6 +158,7 @@ class LinkedInFeedScraper:
                 # 세션 갱신 (쿠키 최신화)
                 print("💾 세션 정보를 갱신합니다...")
                 await self.browser.save_session(self.session_file)
+                await self._sync_config_with_db(direction="save")
             else:
                 print("⚠️ 로그인 세션 만료: 공개 피드 수집 모드로 전환합니다.")
                 if os.path.exists(self.followers_file):
@@ -116,6 +169,8 @@ class LinkedInFeedScraper:
             print(f"\n🎉 모든 작업 완료! 총 {len(self.feed_data)}개 수집됨.")
             if not self.is_docker and not self.headless:
                 print("💡 브라우저를 종료하려면 터미널에서 Enter를 누르거나 Ctrl+C를 누르세요.")
+
+            return self.feed_data, ""
 
     async def _initialize_session(self):
         if os.path.exists(self.session_file):
@@ -146,6 +201,7 @@ class LinkedInFeedScraper:
                 # 터미널 입력 대기
                 await asyncio.get_event_loop().run_in_executor(None, input, "로그인 완료 후 피드가 보이면 Enter를 누르세요...")
                 await self.browser.save_session(self.session_file)
+                await self._sync_config_with_db(direction="save")
                 return True
             return False
         return True
@@ -163,6 +219,7 @@ class LinkedInFeedScraper:
         if should_extract:
             print("📝 팔로우 목록 동기화를 시작합니다.")
             await self._extract_followers()
+            await self._sync_config_with_db(direction="save")
 
     async def _perform_scraping_loop(self):
         total = self.config["total_scrolls"]
@@ -301,7 +358,7 @@ class LinkedInFeedScraper:
                 const reposts = getCount(['repost', '공유']);
 
                 results.push({
-                    post_url: urn,
+                    urn: urn,
                     content: text,
                     links: Array.from(new Set(allLinks)),
                     image_urls: Array.from(new Set(images)),
@@ -317,9 +374,9 @@ class LinkedInFeedScraper:
             added = 0
             for p in results:
                 is_duplicate = False
-                if p["post_url"]:
+                if p["urn"]:
                     for existing in self.feed_data:
-                        if existing["post_url"] == p["post_url"]:
+                        if existing.get("urn") == p["urn"]:
                             is_duplicate = True
                             break
                 elif p["content"] in self.seen_texts:
@@ -328,8 +385,7 @@ class LinkedInFeedScraper:
                 if not is_duplicate:
                     if p["content"]: self.seen_texts.add(p["content"])
                     self.feed_data.append({
-                        "id": len(self.feed_data) + 1,
-                        "post_url": p["post_url"],
+                        "urn": p["urn"],
                         "content": p["content"],
                         "links": p["links"],
                         "image_urls": p["image_urls"],
@@ -345,13 +401,13 @@ class LinkedInFeedScraper:
 
     async def _collect_deep_comments(self):
         """수집된 게시물들의 개별 페이지를 방문하여 댓글을 상세 수집합니다."""
-        target_posts = [p for p in self.feed_data if p.get("post_url") and not p.get("reply")]
+        target_posts = [p for p in self.feed_data if p.get("urn") and not p.get("reply")]
         if not target_posts: return
 
         print(f"\n💬 {len(target_posts)}개 게시물의 댓글 상세 수집을 시작합니다...")
         
-        for idx, item in enumerate(target_posts[:10]):
-            urn = item["post_url"]
+        for idx, item in enumerate(target_posts):
+            urn = item["urn"]
             url = f"https://www.linkedin.com/feed/update/{urn}/"
             print(f"   > [{idx+1}/{len(target_posts)}] 댓글 수집 중: {urn}")
             
@@ -361,12 +417,25 @@ class LinkedInFeedScraper:
                 await self.page.evaluate("window.scrollBy(0, 500)")
                 await asyncio.sleep(2)
 
-                # 디버그용 HTML 저장
-                debug_path = os.path.join(self.html_dir, f"post_debug_{idx+1}.html")
+                # 디버그용 HTML 저장 및 MongoDB 저장
                 try:
                     html = await self.page.content()
+                    
+                    # 로컬 파일 저장
+                    debug_path = os.path.join(self.html_dir, f"post_debug_{idx+1}.html")
                     with open(debug_path, "w", encoding="utf-8") as f: f.write(html)
-                except: pass
+                    
+                    # MongoDB 저장 (pages_html 컬렉션)
+                    if self.db_conn:
+                        db = self.db_conn["linkedin"]
+                        html_coll = db["pages_html"]
+                        html_coll.update_one(
+                            {"_id": urn},
+                            {"$set": {"urn": urn, "html": html, "updated_at": datetime.now()}},
+                            upsert=True
+                        )
+                except Exception as e:
+                    print(f"     ⚠️ HTML 저장 중 오류: {e}")
 
                 # 댓글 추출 JS (매우 구체적으로)
                 comments = await self.page.evaluate("""() => {
@@ -477,15 +546,41 @@ class LinkedInFeedScraper:
                 f.write(f"--- LinkedIn Scrape (Step: {step_info}) ---\n")
                 for item in self.feed_data:
                     f.write(f"[{item['id']}] {item['content'][:80]}...\n")
-        except: pass
+            
+            # MongoDB 저장
+            if self.db_conn:
+                db = self.db_conn["linkedin"]
+                coll = db["pages"]
+                for item in self.feed_data:
+                    # _id 를 urn 으로 설정하여 upsert
+                    doc = item.copy()
+                    if doc.get("urn"):
+                        doc["_id"] = doc["urn"]
+                    coll.update_one({"_id": doc["_id"]}, {"$set": doc}, upsert=True)
+                print(f"✅ MongoDB 데이터 동기화 완료 (누적 {len(self.feed_data)}개)")
+        except Exception as e:
+            print(f"⚠️ 데이터 저장 중 오류: {e}")
 
 if __name__ == "__main__":
     import sys
+    from pymongo import MongoClient
     # Command line argument support: python script.py [total_scrolls]
     ts = int(sys.argv[1]) if len(sys.argv) > 1 else 5
     
-    scraper = LinkedInFeedScraper(total_scrolls=ts)
+    # MongoDB 연결 시도
+    client = None
+    try:
+        client = MongoClient("mongodb://mongodb:27017/", serverSelectionTimeoutMS=2000)
+        client.admin.command('ping')
+        print("✅ MongoDB 연결 성공")
+    except:
+        client = None
+        print("⚠️ MongoDB 연결 실패 (로컬 모드)")
+
+    scraper = LinkedInFeedScraper(total_scrolls=ts, db_connection=client)
     try:
         asyncio.run(scraper.run())
     except KeyboardInterrupt:
         print("\n👋 중단되었습니다.")
+    finally:
+        if client: client.close()
