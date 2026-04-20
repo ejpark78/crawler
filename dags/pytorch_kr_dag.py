@@ -30,7 +30,22 @@ with DAG(
     max_active_runs=int(os.getenv("PYTORCH_KR_MAX_ACTIVE_RUNS", 1)),
     concurrency=int(os.getenv("PYTORCH_KR_CONCURRENCY", 1)),
 ) as dag:
-    dag.doc_str = "PyTorchKR 뉴스 수집 DAG (Dynamic Task Mapping)"
+    dag.doc_md = """
+    ### PyTorchKR 뉴스 수집 DAG (Dynamic Task Mapping)
+    
+    이 DAG은 [PyTorch 한국 사용자 모임](https://discuss.pytorch.kr/)의 최신 게시글과 토론 데이터를 수집합니다.
+    
+    **주요 특징:**
+    - **Dynamic Task Mapping**: 최신 게시글 목록(1~3페이지)을 병렬 태스크로 매핑하여 효율적으로 수집합니다.
+    - **Discourse API 연동**: 사이트의 JSON 엔드포인트를 활용하여 구조화된 게시글 목록을 추출합니다.
+    - **콘텐츠 정문화**: 본문 내 이미지 알트 텍스트 치환, 라이트박스 메타데이터 추출 등 포럼 특화 파싱 로직이 적용되어 있습니다.
+    
+    **데이터 저장:**
+    - **MongoDB**: `pytorch_kr` DB의 `list` 및 `contents` 컬렉션에 증분 저장
+    - **Local Storage**: `volumes/pytorch_kr/` 하위에 실행 ID별 정밀 백업 생성
+    
+    **실행 주기:** 매일 정기적으로 포럼의 새로운 소식을 수집합니다.
+    """
 
     # Dynamic Task Mapping: 실행 시점에 pages 리스트만큼 태스크가 동적으로 생성됨
     collect = BashOperator.partial(

@@ -30,7 +30,22 @@ with DAG(
     max_active_runs=int(os.getenv("GEEKNEWS_MAX_ACTIVE_RUNS", 1)),
     concurrency=int(os.getenv("GEEKNEWS_CONCURRENCY", 1)),
 ) as dag:
-    dag.doc_str = "GeekNews 뉴스 수집 DAG (Dynamic Task Mapping)"
+    dag.doc_md = """
+    ### GeekNews 뉴스 수집 DAG (Dynamic Task Mapping)
+    
+    이 DAG은 [GeekNews](https://news.hada.io/) 사이트의 최신 기술 뉴스 및 댓글 데이터를 수집합니다.
+    
+    **주요 특징:**
+    - **Dynamic Task Mapping**: 1~5페이지를 각각 별도의 병렬 태스크로 매핑하여 수집 속도를 극대화합니다.
+    - **Containerized Isolation**: `docker compose run`을 통해 각 수집 프로세스를 독립된 컨테이너 환경에서 실행합니다.
+    - **JSON-LD 기반 수집**: 댓글 데이터는 우선적으로 구조화된 JSON-LD를 통해 수집하며, 실패 시 HTML 파싱으로 폴백합니다.
+    
+    **데이터 저장:**
+    - **MongoDB**: `geeknews` DB의 `pages`, `html`, `comments` 컬렉션에 실시간 증분 저장 (Upsert)
+    - **Local Storage**: `volumes/geeknews/` 하위에 구조화된 JSON 및 HTML 백업 파일 생성
+    
+    **실행 주기:** 매일 정기 수집 수행 (Catchup 활성화로 과거 데이터 소급 가능)
+    """
 
     # Dynamic Task Mapping: 실행 시점에 pages 리스트만큼 태스크가 동적으로 생성됨
     collect = BashOperator.partial(
