@@ -54,9 +54,6 @@ class PyTorchKRScraper(BaseScraper):
 
     def parse(self, html: str, db_connection=None) -> List[PytorchKRContents]:
         """Parses JSON list from PyTorchKR and fetches/parses each topic detail."""
-        items = []
-
-        # Determine if content is JSON or HTML
         trimmed_html = html.strip()
         if not trimmed_html.startswith('{'):
             logger.error(f"PyTorchKR parse expected JSON list but received: {trimmed_html[:100]}...")
@@ -64,65 +61,70 @@ class PyTorchKRScraper(BaseScraper):
 
         try:
             data = json.loads(trimmed_html)
-            # Discourse API structure: topics are usually under topic_list.topics
-            topics = data.get('topic_list', {}).get('topics', [])
-            logger.info(f"Found {len(topics)} topics in the list.")
-
-            if db_connection is not None:
-                collection_list = db_connection[self.db_name][self.collection_list]
-                collection_contents = db_connection[self.db_name][self.collection_contents]
-            else:
-                collection_list = None
-                collection_contents = None
-
-            for topic in topics:
-                try:
-                    if collection_list is not None:
-                        collection_list.update_one(
-                            {"_id": f"{topic.get('slug')}_{topic.get('id')}"},
-                            {"$set": topic},
-                            upsert=True
-                        )
-
-                    title = topic.get('title')
-                    # Construct topic URL
-                    topic_id = topic.get('id')
-                    slug = topic.get('slug')
-                    if not (topic_id and slug): continue
-                    
-                    url = f"https://discuss.pytorch.kr/t/{slug}/{topic_id}"
-                    logger.info(f"Processing topic: {title} ({url})...")
-                    
-                    # 1. Fetch detail page
-                    detail_html = self.fetch(url)
-                    if not detail_html:
-                        logger.warning(f"Failed to fetch detail for: {url}")
-                        continue
-                        
-                    # 2. Parse detail page
-                    item = self.parse_content(detail_html, url)
-                    
-                    # 3. Persistence (DB & Local)
-                    if collection_contents is not None:
-                        doc = item.model_dump(mode='json')
-                        collection_contents.update_one(
-                            {"_id": f"{topic.get('slug')}_{topic.get('id')}"},
-                            {"$set": {**topic, 'contents': doc}},
-                            upsert=True
-                        )
-
-                    if getattr(self, 'debug_path', None):
-                        self._save_to_file(item)
-                    items.append(item)
-                except Exception as e:
-                    logger.error(f"Error processing topic {topic.get('id')}: {e}")
-                    continue
         except json.JSONDecodeError:
             logger.error("Failed to decode JSON from PyTorchKR list response")
-        except Exception as e:
-            logger.error(f"Unexpected error in PyTorchKR.parse: {e}")
+            return []
+
+        topics = data.get('topic_list', {}).get('topics', [])
+        logger.info(f"Found {len(topics)} topics in the list.")
+
+        # Setup DB collections
+        db = db_connection[self.db_name] if db_connection else None
+        coll_list = db[self.collection_list] if db else None
+        coll_contents = db[self.collection_contents] if db else None
+
+        items = []
+        for topic in topics:
+            item = self._process_topic(topic, coll_list, coll_contents)
+            if item:
+                items.append(item)
 
         return items
+
+    def _process_topic(self, topic: dict, coll_list=None, coll_contents=None) -> PytorchKRContents:
+        """Processes a single topic: saves metadata, fetches detail, and parses content."""
+        try:
+            topic_id = topic.get('id')
+            slug = topic.get('slug')
+            if not (topic_id and slug):
+                return None
+
+            # 1. Update list collection
+            if coll_list is not None:
+                coll_list.update_one(
+                    {"_id": f"{slug}_{topic_id}"},
+                    {"$set": topic},
+                    upsert=True
+                )
+
+            title = topic.get('title')
+            url = f"https://discuss.pytorch.kr/t/{slug}/{topic_id}"
+            logger.info(f"Processing topic: {title} ({url})...")
+
+            # 2. Fetch and parse detail page
+            detail_html = self.fetch(url)
+            if not detail_html:
+                logger.warning(f"Failed to fetch detail for: {url}")
+                return None
+
+            item = self.parse_content(detail_html, url)
+
+            # 3. Persistence (DB & Local)
+            if coll_contents is not None:
+                doc = item.model_dump(mode='json')
+                coll_contents.update_one(
+                    {"_id": f"{slug}_{topic_id}"},
+                    {"$set": {**topic, 'contents': doc}},
+                    upsert=True
+                )
+
+            if getattr(self, 'debug_path', None):
+                self._save_to_file(item)
+
+            return item
+        except Exception as e:
+            logger.error(f"Error processing topic {topic.get('id', 'unknown')}: {e}")
+            return None
 
     def parse_content(self, html: str, url: str) -> PytorchKRContents:
         """Parses a single topic page to extract full content and metadata."""
@@ -140,49 +142,54 @@ class PyTorchKRScraper(BaseScraper):
             title = title.split(" - ")[0]
         
         # Extract publication date
-        published_at = None
         time_tag = soup.find('time', datetime=True)
-        if time_tag:
-            published_at = time_tag['datetime']
+        published_at = time_tag['datetime'] if time_tag else None
 
         # Extract main text
         post_div = soup.find('div', class_='post', itemprop='text')
-        if post_div:
-            # Handle lightbox wrappers specifically to match sample output
-            for lb in post_div.find_all('div', class_='lightbox-wrapper'):
-                img = lb.find('img')
-                alt = img.get('alt', '') if img else ''
-                info = lb.find('span', class_='informations')
-                info_text = info.get_text() if info else ""
-                
-                parts = []
-                # Only keep alt text if it's different from the title
-                if alt and alt != title:
-                    parts.append(alt)
-                if info_text:
-                    parts.append(info_text)
-                
-                lb.replace_with('\n'.join(parts))
+        if not post_div:
+            return PytorchKRContents(
+                title=title,
+                url=url,
+                source=self.source_name,
+                content="Full content extraction not implemented in this version",
+                published_at=published_at,
+                html=html
+            )
 
-            # Handle other images (like emojis)
-            for img in post_div.find_all('img'):
-                alt = img.get('alt', '')
-                if alt.startswith(':'): # Emojis
-                    img.decompose()
-                elif alt and alt != title:
-                    img.replace_with(alt)
-                else:
-                    img.decompose()
+        # Handle lightbox wrappers specifically to match sample output
+        for lb in post_div.find_all('div', class_='lightbox-wrapper'):
+            img = lb.find('img')
+            alt = img.get('alt', '') if img else ''
+            info = lb.find('span', class_='informations')
+            info_text = info.get_text() if info else ""
             
-            # Get text with normalized whitespace
-            raw_text = post_div.get_text(separator='\n')
-            lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-            content_text = '\n'.join(lines)
+            parts = []
+            # Only keep alt text if it's different from the title
+            if alt and alt != title:
+                parts.append(alt)
+            if info_text:
+                parts.append(info_text)
             
-            # The expected output starts with the title
-            content = f"{title}\n{content_text}"
-        else:
-            content = "Full content extraction not implemented in this version"
+            lb.replace_with('\n'.join(parts))
+
+        # Handle other images (like emojis)
+        for img in post_div.find_all('img'):
+            alt = img.get('alt', '')
+            if alt.startswith(':'): # Emojis
+                img.decompose()
+            elif alt and alt != title:
+                img.replace_with(alt)
+            else:
+                img.decompose()
+        
+        # Get text with normalized whitespace
+        raw_text = post_div.get_text(separator='\n')
+        lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+        content_text = '\n'.join(lines)
+        
+        # The expected output starts with the title
+        content = f"{title}\n{content_text}"
 
         return PytorchKRContents(
             title=title,

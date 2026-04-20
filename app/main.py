@@ -23,8 +23,9 @@
      데이터를 백업합니다.
 
 실행 예시:
-    docker compose run --rm -v .:/app -w /app uv run python -m app.main --source LinkedIn --page 1
-    docker compose run --rm -v .:/app -w /app uv run python -m app.main --source GeekNews --date 2026-04-20 --page 1
+    docker compose run --rm -v .:/app -w /app worker uv run python -m app.main --source LinkedIn
+    docker compose run --rm -v .:/app -w /app worker uv run python -m app.main --source GeekNews --page 1
+    docker compose run --rm -v .:/app -w /app worker uv run python -m app.main --source GeekNews --date 2026-04-20 --page 1
 """
 import argparse
 import logging
