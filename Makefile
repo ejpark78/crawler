@@ -59,10 +59,10 @@ logs:
 	docker compose logs -f
 
 ps:
-	watch -d -n 5 docker ps
+	watch -d -t -c -n 5 "echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] 🚀 CONTAINER STATUS\" && docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' | (read -r header; echo \"\$$header\"; sort -k2,3 -r)"
 
-stats:
-	docker stats
+top:
+	watch -d -t -c -n 5 "echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] 🚀 CONTAINER STATS\" && docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}'"
 
 # --- Collection & Testing ---
 # Example: make test SOURCE=PyTorchKR PAGE=1 LOG_LEVEL=DEBUG
@@ -107,7 +107,7 @@ run:
 	done
 
 # --- Airflow ---
-# Example: make backfill SOURCE=GeekNews START_DATE=2023-04-01 END_DATE=2025-02-04
+# Example: make backfill SOURCE=GeekNews START_DATE=2023-04-01 END_DATE=2024-06-17
 backfill:
 	@current_date=$(END_DATE); \
 	until [[ "$$current_date" < "$(START_DATE)" ]]; do \
