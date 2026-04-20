@@ -56,7 +56,7 @@ done
 docker compose run --rm -v .:/app -w /app \
    -e DOCKER_MODE=true -e HEADLESS=true -e TOTAL_SCROLLS=20 \
    worker uv run python -m app.main \
-   --source LinkedIn --page 1
+   --source LinkedIn 
 
 
 

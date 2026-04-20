@@ -27,6 +27,7 @@ END_DATE ?= 2026-04-17
 DAG_ID = geeknews
 OUT_PATH ?= /app/volumes/debug/$(shell date +"%Y-%m-%d_%H%M")/$(SOURCE)_$(DATE)_$(PAGE)
 LOG_LEVEL ?= INFO
+NET_NAME = airflow-net
 
 .PHONY: *
 
@@ -149,11 +150,14 @@ airflow-bash:
 worker-bash:
 	docker compose exec worker bash
 
+# DELETE FROM task_instance WHERE dag_id='geeknews';
 pgsql:
 	docker compose exec postgres psql -U airflow -d airflow
 
-# docker compose exec postgres psql -U airflow -d airflow -c "DELETE FROM task_instance WHERE dag_id='geeknews';"  
-
 init-net:
-	docker network create -d bridge airflow-net
+	docker network create -d bridge $(NET_NAME)
 	docker network ls
+
+ipconfig:
+	@echo "Docker Networks and Subnets"
+	@docker network ls -q | xargs docker network inspect --format '{{.Name}}: {{range .IPAM.Config}}{{.Subnet}}{{end}}'

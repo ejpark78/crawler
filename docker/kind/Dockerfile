@@ -1,0 +1,2 @@
+ARG K8S_VERSION=v1.35.1
+FROM kindest/node:${K8S_VERSION}

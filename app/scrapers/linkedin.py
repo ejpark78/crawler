@@ -399,10 +399,52 @@ class LinkedInScraper(BaseScraper):
             print(f"   ⚠️ 추출 중 오류 발생: {e}")
             return 0
 
+    def _filter_posts_by_db_cache(self, posts):
+        """이미 DB에 수집된 결과가 있는 게시물을 필터링하고 메모리 데이터를 업데이트합니다."""
+        if not self.db_conn or not posts:
+            return posts
+
+        try:
+            db = self.db_conn["linkedin"]
+            coll = db["pages"]
+            urns = [p["urn"] for p in posts if p.get("urn")]
+            
+            # bulk query로 이미 댓글이 있는 문서들 가져오기
+            existing_docs = {doc["_id"]: doc for doc in coll.find(
+                {"_id": {"$in": urns}, "reply": {"$exists": True, "$not": {"$size": 0}}}, 
+                {"reply": 1}
+            )}
+            
+            new_targets = []
+            skipped_count = 0
+            for p in posts:
+                urn = p.get("urn")
+                if urn and urn in existing_docs:
+                    p["reply"] = existing_docs[urn]["reply"]
+                    skipped_count += 1
+                else:
+                    new_targets.append(p)
+            
+            if skipped_count > 0:
+                print(f"   > [Skip] {skipped_count}개 게시물은 이미 DB에 댓글이 있어 수집을 생략합니다.")
+            
+            return new_targets
+        except Exception as e:
+            print(f"   ⚠️ DB 중복 체크 중 오류 발생: {e}")
+            return posts
+
     async def _collect_deep_comments(self):
         """수집된 게시물들의 개별 페이지를 방문하여 댓글을 상세 수집합니다."""
         target_posts = [p for p in self.feed_data if p.get("urn") and not p.get("reply")]
         if not target_posts: return
+
+        # MongoDB에서 이미 수집된 결과가 있는지 확인하여 필터링
+        target_posts = self._filter_posts_by_db_cache(target_posts)
+
+        if not target_posts:
+            if any(p.get("reply") for p in self.feed_data):
+                self._persist_data("deep_skipped")
+            return
 
         print(f"\n💬 {len(target_posts)}개 게시물의 댓글 상세 수집을 시작합니다...")
         
@@ -545,7 +587,7 @@ class LinkedInScraper(BaseScraper):
             with open(l_txt, "w", encoding="utf-8") as f:
                 f.write(f"--- LinkedIn Scrape (Step: {step_info}) ---\n")
                 for item in self.feed_data:
-                    f.write(f"[{item['id']}] {item['content'][:80]}...\n")
+                    f.write(f"[{item['content'][:80]}...\n")
             
             # MongoDB 저장
             if self.db_conn:
@@ -560,6 +602,7 @@ class LinkedInScraper(BaseScraper):
                 print(f"✅ MongoDB 데이터 동기화 완료 (누적 {len(self.feed_data)}개)")
         except Exception as e:
             print(f"⚠️ 데이터 저장 중 오류: {e}")
+
 
 if __name__ == "__main__":
     import sys
