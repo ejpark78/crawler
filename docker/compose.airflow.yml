@@ -36,6 +36,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     labels:
       - "traefik.enable=true"
+      - "${TRAEFIK_ENABLE_LABEL}=true"
       - "traefik.http.routers.airflow.rule=Host(`af.localhost`)"
       - "traefik.http.routers.airflow.entrypoints=web"
       - "traefik.http.services.airflow.loadbalancer.server.port=8080"
@@ -73,6 +74,7 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     labels:
       - "traefik.enable=true"
+      - "${TRAEFIK_ENABLE_LABEL}=true"
       - "traefik.http.routers.pgadmin.rule=Host(`pg.localhost`)"
       - "traefik.http.routers.pgadmin.entrypoints=web"
       - "traefik.http.routers.pgadmin.middlewares=pgadmin-stripprefix,pgadmin-scriptname"

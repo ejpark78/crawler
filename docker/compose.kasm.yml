@@ -35,7 +35,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     labels:
       - "traefik.enable=true"
-      - "traefik.enable=true"
+      - "${TRAEFIK_ENABLE_LABEL}=true"
       - "traefik.http.routers.kasm.rule=Host(`kasm.localhost`)"
       - "traefik.http.routers.kasm.entrypoints=web"
       - "traefik.http.services.kasm.loadbalancer.server.port=6901"

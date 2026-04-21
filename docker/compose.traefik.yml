@@ -17,6 +17,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     labels:
       - "traefik.enable=true"
+      - "${TRAEFIK_ENABLE_LABEL}=true"
       - "traefik.http.routers.traefik_dash.rule=Host(`dash.localhost`)"
       - "traefik.http.routers.traefik_dash.service=api@internal"
       - "traefik.http.routers.traefik_dash.entrypoints=web"
@@ -26,10 +27,11 @@ services:
       timeout: 5s
       retries: 3
     command:
+      - "--ping=true"
       - "--api.dashboard=true"
+      - "--entrypoints.web.address=:80"
+      - "--providers.file.watch=true"
+      - "--providers.file.filename=/etc/traefik/dynamic_conf.yml"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--ping=true"
-      - "--providers.file.filename=/etc/traefik/dynamic_conf.yml"
-      - "--providers.file.watch=true"
+      - "--providers.docker.constraints=Label(`${TRAEFIK_ENABLE_LABEL}`, `true`)"
