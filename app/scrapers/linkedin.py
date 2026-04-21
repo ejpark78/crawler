@@ -91,7 +91,7 @@ class LinkedInScraper(BaseScraper):
 
     async def _sync_config_with_db(self, direction="load"):
         """MongoDB와 로컬 파일(session, followers) 동기화"""
-        if not self.db_conn: return
+        if self.db_conn is None: return
         
         db = self.db_conn["linkedin"]
         coll = db["config"]
@@ -133,7 +133,7 @@ class LinkedInScraper(BaseScraper):
                         print(f"⚠️ {key} 설정 백업 중 오류: {e}")
 
     async def run(self, db_connection=None, backfill_date=None, page=None):
-        if db_connection:
+        if db_connection is not None:
             self.db_conn = db_connection
             
         print(f"🚀 LinkedIn Scraper 엔진 시작 (ID: {self.run_id})")

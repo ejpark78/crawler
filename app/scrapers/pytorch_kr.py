@@ -69,9 +69,9 @@ class PyTorchKRScraper(BaseScraper):
         logger.info(f"Found {len(topics)} topics in the list.")
 
         # Setup DB collections
-        db = db_connection[self.db_name] if db_connection else None
-        coll_list = db[self.collection_list] if db else None
-        coll_contents = db[self.collection_contents] if db else None
+        db = db_connection[self.db_name] if db_connection is not None else None
+        coll_list = db[self.collection_list] if db is not None else None
+        coll_contents = db[self.collection_contents] if db is not None else None
 
         items = []
         for topic in topics:
