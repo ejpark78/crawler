@@ -15,7 +15,10 @@ services:
       - DOCKER_TLS_CERTDIR= # DinD 사용 시 인증서 충돌 방지
     volumes:
       - /lib/modules:/lib/modules:ro
-      # - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
     healthcheck:
       # test: ["CMD", "kubectl", "cluster-info", "--kubeconfig=/etc/kubernetes/admin.conf"]
       test: ["CMD", "crictl", "info"]
@@ -38,6 +41,10 @@ services:
       - DOCKER_TLS_CERTDIR=       
     volumes:
       - /lib/modules:/lib/modules:ro
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
     depends_on:
       control-plane:
         condition: service_healthy

@@ -58,6 +58,15 @@ networks:
 
 ```shell
 
+docker compose -f docker/compose.kind.yml up -d 
+
+docker compose -f docker/compose.kind.yml run \
+  kubeadm init --config kubeadm-config.yaml \
+    --skip-phases=addon/kube-proxy \
+    --node-name=control-plane \
+    --ignore-preflight-errors=ImagePull
+
+
 # 1. 일단 이미지가 컨테이너 안에 있는지 확인 (결과가 나오면 이미 있는 것임)
 crictl images 
 
@@ -79,6 +88,21 @@ kubeadm init --config kubeadm-config.yaml \
   --skip-phases=addon/kube-proxy \
   --node-name=control-plane \
   --ignore-preflight-errors=ImagePull
+
+kubeadm init \
+  --kubernetes-version=v1.35.1 \
+  --node-name=control-plane \
+  --ignore-preflight-errors=ImagePull
+
+
+
+# 컨테이너 내부에서 실행하는 경우
+docker compose -f docker/compose.kind.yml exec control-plane kubeadm init --config=/etc/kubernetes/kubeadm-config.yaml --dry-run
+
+# 또는 파일만 생성하고 싶을 때 (임시 컨테이너 사용)
+docker run --rm kindest/node:v1.35.1 kubeadm config print init-defaults > kubeadm-config.yaml
+
+
 
 
 

@@ -56,6 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     im-config \
     dbus-x11 \
     # GUI & Electron Dependencies for Chrome
+    libfuse2 \
     libgbm1 \
     libasound2t64 \
     libnss3 \
@@ -93,11 +94,11 @@ RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd6
     && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list \
     && add-apt-repository ppa:serge-rider/dbeaver-ce -y \
     && wget -q https://compass.mongodb.com/api/v2/download/latest/compass/stable/linux_deb -O mongodb-compass.deb \
-    && apt-get update && apt-get install -y --no-install-recommends \
-        code \
-        dbeaver-ce \
-        ./mongodb-compass.deb \
+    && apt-get update && apt-get install -y --no-install-recommends code dbeaver-ce \
+    && apt-get install -y --no-install-recommends ./mongodb-compass.deb \
     && rm mongodb-compass.deb \
+    && curl -fsS https://dl.brave.com/install.sh | bash - \
+    && apt-get update && apt-get install -y --no-install-recommends brave-browser \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 6. Infrastructure (Docker CLI, Antigravity)
@@ -145,6 +146,14 @@ RUN ZSH=/etc/skel/.oh-my-zsh sh -c "$(curl -fsSL https://raw.githubusercontent.c
     && echo '\nalias docker="sudo docker"\n"' >> /home/kasm-user/.zshrc \
     && cp /home/kasm-user/.zshrc /etc/skel/.zshrc \
     && chown -R kasm-user:kasm-user /home/kasm-user
+
+# 10. Install Joplin to /etc/skel (Persistence support)
+RUN wget -O - https://raw.githubusercontent.com/laurent22/joplin/dev/Joplin_install_and_update.sh | bash -s -- --allow-root --install-dir /etc/skel/.joplin \
+    && mkdir -p /etc/skel/.local/share/applications \
+    && if [ -f /root/.local/share/applications/joplin.desktop ]; then \
+         cp /root/.local/share/applications/joplin.desktop /etc/skel/.local/share/applications/ ; \
+         sed -i 's/\/root\/.joplin/\/home\/kasm-user\/.joplin/g' /etc/skel/.local/share/applications/joplin.desktop ; \
+       fi
 
 USER kasm-user
 
