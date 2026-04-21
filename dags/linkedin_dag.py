@@ -44,11 +44,11 @@ with DAG(
     dag_id="linkedin",
     default_args=default_args,
     start_date=days_ago(1),
-    schedule_interval="@daily",
+    schedule_interval=timedelta(hours=2),
     catchup=False,
     tags=["Crawler", "LinkedIn", "Browser"],
-    max_active_runs=1,
-    concurrency=1,
+    max_active_runs=int(os.getenv("LINKEDIN_MAX_ACTIVE_RUNS", 2)),
+    concurrency=int(os.getenv("LINKEDIN_CONCURRENCY", 1)),
 ) as dag:
     dag.doc_md = """
     ### LinkedIn 메인 피드 및 상세 댓글 수집 DAG
