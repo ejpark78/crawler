@@ -7,5 +7,4 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "Installing uv..."
-export UV_INSTALL_DIR=/usr/local/bin
 curl -LsSf https://astral.sh/uv/install.sh | bash -

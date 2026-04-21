@@ -7,6 +7,7 @@ USER root
 
 # 0. 빌드 인자(Arguments) 설정 - 선택적 모듈 설치 제어
 ARG MODULE_FCITX=true
+ARG MODULE_OHMYZSH=true
 ARG MODULE_DESKTOP_UTILS=false
 ARG MODULE_UV=false
 ARG MODULE_NODEJS=false
@@ -14,17 +15,18 @@ ARG MODULE_AI_AGENTS=false
 ARG MODULE_VSCODE=false
 ARG MODULE_DBEAVER=false
 ARG MODULE_BRAVE=false
-ARG MODULE_OHMYZSH=false
 ARG MODULE_JOPLIN=false
 ARG MODULE_DOCKER=false
 ARG MODULE_ANTIGRAVITY=false
-ARG MODULE_CHROME=false
+ARG MODULE_CHROME=true
+ARG MODULE_FIREFOX=false
 ARG MODULE_MONGO_COMPASS=false
 
 # 1. 환경 변수 설정
 ENV DEBIAN_FRONTEND=noninteractive \
-    UV_INSTALL_DIR=/usr/local/bin \
-    PASSWORD_STORE=basic
+    PASSWORD_STORE=basic \
+    PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/playwright \
+    UV_INSTALL_DIR=/usr/local/bin
 
 ENV XMODIFIERS=@im=fcitx \
     GTK_IM_MODULE=fcitx \
@@ -45,6 +47,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     locales \
     python3 \
     python3-pip \
+    eza \
+    fzf \
+    git \
     && locale-gen ko_KR.UTF-8 en_US.UTF-8 \
     && update-locale LANG=ko_KR.UTF-8 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*

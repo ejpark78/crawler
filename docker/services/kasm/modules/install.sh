@@ -42,6 +42,7 @@ install_module "Joplin" "joplin.sh" "$MODULE_JOPLIN"
 install_module "Docker" "docker.sh" "$MODULE_DOCKER"
 install_module "Antigravity" "antigravity.sh" "$MODULE_ANTIGRAVITY"
 install_module "Chrome" "chrome.sh" "$MODULE_CHROME"
+install_module "Firefox" "firefox.sh" "$MODULE_FIREFOX"
 install_module "Mongo Compass" "mongo_compass.sh" "$MODULE_MONGO_COMPASS"
 
 echo "Modular installation completed."
