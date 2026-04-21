@@ -1,6 +1,7 @@
 .venv
 volumes
 .env
+.env.k8s
 __pycache__
 .pytest_cache
 samples

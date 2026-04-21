@@ -8,13 +8,11 @@ services:
         - K8S_VERSION=v1.35.1
     image: local/kind:v1.35.1
     privileged: true
-    networks:
-      k8s-net:
-        ipv4_address: 172.20.0.10
     environment:
       - DOCKER_TLS_CERTDIR= # DinD 사용 시 인증서 충돌 방지
     volumes:
       - /lib/modules:/lib/modules:ro
+      - /home/ejpark/workspace/crawler/docker/kind/init.sh:/init.sh
     tmpfs:
       - /run
       - /run/lock
@@ -36,7 +34,7 @@ services:
     image: local/kind:v1.35.1
     privileged: true
     deploy:
-      replicas: 2
+      replicas: 1
     environment:
       - DOCKER_TLS_CERTDIR=       
     volumes:
@@ -53,10 +51,3 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-
-networks:
-  k8s-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16

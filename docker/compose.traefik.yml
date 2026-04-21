@@ -6,13 +6,13 @@
 # - 엔트리포인트: web (80번 포트)
 
 services:
-  proxy:
+  traefik:
     build:
       context: ./traefik
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "80:80"
+      - "${TRAEFIK_PORT}:80"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     labels:

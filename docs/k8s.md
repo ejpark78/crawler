@@ -1,110 +1,11 @@
-기술적인 도전 정신이 멋지시네요! KinD(Kubernetes in Docker)를 사용하면서도 그 내부 동작 원리(Hard Way)를 이해하기 위해 **Docker Compose로 노드들을 직접 정의하고, 그 안에서 `kubeadm`으로 클러스터를 구성**하는 방법을 찾으시는군요.
 
-이 방식은 KinD가 내부적으로 사용하는 `kindest/node` 이미지를 활용하여, Docker Compose로 인프라(노드)를 띄운 뒤 수동으로 `kubeadm` 명령어를 날리는 방식입니다.
-
-### docker network subnet
-
-```shell
-docker network ls -q | xargs docker network inspect --format '{{.Name}}: {{range .IPAM.Config}}{{.Subnet}}{{end}}'
-
-
-docker network create --driver bridge \
-  --subnet=172.20.0.0/16 \
-  --ip-range=172.20.0.0/24 \
-  --gateway=172.20.0.1 \
-  k8s-net
-
-```
-
-### 1. `docker-compose.yml` 구성 (인프라 준비)
-먼저 마스터 노드(Control-plane) 1개와 워커 노드 2개를 정의합니다. 각 컨테이너는 K8s 실행을 위해 `privileged` 권한이 필요합니다.
-
-```yaml
-services:
-  control-plane:
-    image: kindest/node:v1.35.1
-    privileged: true
-    networks:
-      k8s-net:
-        ipv4_address: 172.20.0.10
-    volumes:
-      - /lib/modules:/lib/modules:ro
-
-  worker1:
-    image: kindest/node:v1.35.1
-    privileged: true
-    networks:
-      k8s-net:
-        ipv4_address: 172.20.0.11
-    volumes:
-      - /lib/modules:/lib/modules:ro
-
-  worker2:
-    image: kindest/node:v1.35.1
-    privileged: true
-    networks:
-      k8s-net:
-        ipv4_address: 172.20.0.12
-    volumes:
-      - /lib/modules:/lib/modules:ro
-
-networks:
-  k8s-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-```
 
 ```shell
 
-docker compose -f docker/compose.kind.yml up -d 
 
-docker compose -f docker/compose.kind.yml run \
-  kubeadm init --config kubeadm-config.yaml \
-    --skip-phases=addon/kube-proxy \
-    --node-name=control-plane \
-    --ignore-preflight-errors=ImagePull
+docker compose -f docker/compose.kind.yml up -d
 
-
-# 1. 일단 이미지가 컨테이너 안에 있는지 확인 (결과가 나오면 이미 있는 것임)
-crictl images 
-
-cat <<EOF > kubeadm-config.yaml
-kind: ClusterConfiguration
-apiVersion: kubeadm.k8s.io/v1beta4
-kubernetesVersion: v1.35.1
-networking:
-  podSubnet: "10.244.0.0/16"
----
-kind: KubeletConfiguration
-apiVersion: kubelet.config.k8s.io/v1beta1
-cgroupDriver: systemd
-failSwapOn: false
-EOF
-
-# 2. 이미지가 있다면, 이미지 풀링 단계를 건너뛰고 실행
-kubeadm init --config kubeadm-config.yaml \
-  --skip-phases=addon/kube-proxy \
-  --node-name=control-plane \
-  --ignore-preflight-errors=ImagePull
-
-kubeadm init \
-  --kubernetes-version=v1.35.1 \
-  --node-name=control-plane \
-  --ignore-preflight-errors=ImagePull
-
-
-
-# 컨테이너 내부에서 실행하는 경우
-docker compose -f docker/compose.kind.yml exec control-plane kubeadm init --config=/etc/kubernetes/kubeadm-config.yaml --dry-run
-
-# 또는 파일만 생성하고 싶을 때 (임시 컨테이너 사용)
-docker run --rm kindest/node:v1.35.1 kubeadm config print init-defaults > kubeadm-config.yaml
-
-
-
-
+docker compose -f docker/compose.kind.yml exec -it control-plane bash
 
 ```
 
@@ -182,4 +83,4 @@ kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/
 ### 3. 한 줄 요약
 > **"컨테이너(노드)가 네트워크를 구성하거나 시스템 설정을 할 때, 호스트의 커널 기능을 빌려 쓸 수 있도록 통로를 열어주는 것"**
 
-만약 이 설정이 없으면, `kubeadm init`을 할 때나 CNI를 설치할 때 **"Can't load kernel module"** 또는 **"Iptables/IPVS not found"** 같은 에러를 뿜으며 실패할 확률이 매우 높습니다. 
+만약 이 설정이 없으면, `kubeadm init`을 할 때나 CNI를 설치할 때 **"Can't load kernel module"** 또는 **"Iptables/IPVS not found"** 같은 에러를 뿜으며 실패할 확률이 매우 높습니다.

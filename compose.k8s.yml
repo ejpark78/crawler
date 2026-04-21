@@ -1,0 +1,7 @@
+
+name: k8s
+
+include:
+  - docker/compose.traefik.yml
+  - docker/compose.kasm.yml
+  - docker/compose.k8s.yml

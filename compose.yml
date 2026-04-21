@@ -11,7 +11,7 @@
 name: crawler
 
 include:
-  - docker/compose.proxy.yml
+  - docker/compose.traefik.yml
   - docker/compose.kasm.yml
   - docker/compose.mongo.yml
   - docker/compose.airflow.yml
