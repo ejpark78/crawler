@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# This script runs at container start as the kasm-user.
 
 echo "Initializing Korean Input (Fcitx)..."
 

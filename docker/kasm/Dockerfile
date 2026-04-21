@@ -75,7 +75,7 @@ RUN install -m 0755 -d /etc/apt/keyrings \
     && curl -LsSf https://astral.sh/uv/install.sh | bash - \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get update && apt-get install -y --no-install-recommends nodejs \
-    && curl -fsSL https://ollama.com/install.sh | bash - \
+    # && curl -fsSL https://ollama.com/install.sh | bash - \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 4. AI Agents & Automation (Claude Code, OpenCode, Playwright, Gemini)
@@ -130,22 +130,9 @@ COPY startup/* /dockerstartup/
 RUN chmod +x /dockerstartup/* \
     && chown -R kasm-user:kasm-user /home/kasm-user
 
-# 6. 사용자 권한 설정 (DooD 지원 및 Sudo)
-RUN for gid in 999 998 989; do \
-        if getent group $gid; then \
-            GROUP_NAME=$(getent group $gid | cut -d: -f1); \
-        else \
-            GROUP_NAME="docker_host_${gid}"; \
-            groupadd -g $gid $GROUP_NAME; \
-        fi; \
-        usermod -aG $GROUP_NAME kasm-user; \
-    done
-
-# 7. Sudo 권한 부여
-RUN echo "kasm-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-# 8. 최종 설정 및 셸 변경
-RUN usermod -s /bin/zsh kasm-user
+# 6. 사용자 권한 설정 (Sudo)
+RUN echo "kasm-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
+    && usermod -s /bin/zsh kasm-user
 
 # 9. Install Oh My Zsh to /etc/skel (Persistence support)
 RUN ZSH=/etc/skel/.oh-my-zsh sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
