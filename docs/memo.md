@@ -169,7 +169,42 @@ WSL2에서 Snap으로 설치된 Chromium은 샌드박스 보안 정책 때문에
 chromium-browser --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0 --headless=new --disable-gpu --no-sandbox
 ```
 
----
 
-**요약하자면:**
-로그상의 `libpxbackend` 에러는 무시해도 실행되는 경우가 많으나, 실제 실행이 안 되는 핵심 이유는 **필수 라이브러리(`upower` 등) 누락** 또는 **Snap 샌드박스 제한**일 가능성이 큽니다. `apt install upower`를 먼저 해보시고, 안 된다면 Snap 버전 Chromium을 지우고 Playwright가 직접 관리하는 바이너리를 사용하시는 걸 추천드립니다.
+```mermaid
+graph LR
+    %% 유입
+    User((사용자)) --> Proxy[Traefik Proxy]
+
+    %% 관리 및 스케줄링
+    subgraph Control_Unit [Airflow]
+        Web[Webserver]
+        Sch[Scheduler]
+    end
+
+    %% 실제 작업
+    Worker[[Crawler Worker]]
+
+    %% 데이터 저장소
+    subgraph Data_Layer [Storage]
+        DB[(PostgreSQL / MongoDB)]
+    end
+
+    %% 주요 흐름
+    Proxy --> Web
+    Sch == "1. Trigger Container" ==> Worker
+    Worker -- "2. Save Data" --> DB
+    
+    %% 제어 관계
+    Web -.-> DB
+    Sch -.-> DB
+
+
+```
+
+### 그래프의 핵심 포인트
+1.  **제어 흐름 (Scheduler → Worker)**: Airflow Scheduler가 호스트의 Docker 엔진과 통신하여 필요한 시점에 `Worker` 컨테이너를 생성(Spawn)합니다.
+2.  **데이터 흐름 (Worker → DB/File)**: 수집된 데이터는 `MongoDB`와 로컬 `Filesystem` 두 곳으로 동시에 저장되어 데이터 안정성을 확보합니다.
+3.  **접속 흐름 (User → Proxy → App)**: 모든 외부 접속은 `Traefik Proxy`를 거쳐 도메인 주소(`*.localhost`)에 따라 적절한 서비스로 분배됩니다.
+4.  **공유 네트워크**: 모든 서비스는 `crawler_default` 네트워크 내에서 서비스 이름으로 직접 통신합니다.
+
+
