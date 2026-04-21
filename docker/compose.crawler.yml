@@ -1,0 +1,18 @@
+# 크롤러 프로젝트 메인 Docker Compose 설정
+# 이 파일은 'include' 지시어를 사용하여 모든 서비스 모듈을 통합합니다.
+#
+# 포함된 모듈:
+# - proxy: Traefik 리버스 프록시 (서비스 외부 노출 및 라우팅 담당)
+# - kasm: 배스천 호스트 (VDI 환경, 한글 입력 및 브라우저 도구 포함)
+# - mongo: MongoDB 데이터베이스 및 Mongo Express 관리 UI
+# - airflow: Airflow 스케줄러/웹서버 및 PostgreSQL 메타데이터 DB
+# - worker: Airflow에서 실행할 일회성 크롤러 작업 컨테이너 (기본 이미지 사용)
+
+name: crawler
+
+include:
+  - compose.traefik.yml
+  - compose.kasm.yml
+  - compose.mongo.yml
+  - compose.airflow.yml
+  - compose.worker.yml

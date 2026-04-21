@@ -8,6 +8,7 @@
 #   DATE     - 백필 및 과거 데이터 조회 시 기준 날짜 (YYYY-MM-DD)
 #   PAGE     - 수집할 페이지 번호 (기본: 1)
 #   OUT_PATH - 수집된 결과를 JSON 파일로 저장할 경로 (기본: volumes/ 하위)
+#   PRJ      - 실행 환경/프로젝트 구분 (crawler, k8s, 기본: crawler)
 #
 # [실행 그룹]
 #   1. Infrastructure : 컨테이너 기동, 정지, 재시작 및 상태 확인
@@ -29,7 +30,20 @@ OUT_PATH ?= /app/volumes/debug/$(shell date +"%Y-%m-%d_%H%M")/$(SOURCE)_$(DATE)_
 LOG_LEVEL ?= INFO
 NET_NAME = airflow-net
 
+PRJ ?= crawler
+ifeq ($(PRJ),k8s)
+  COMPOSE_FILE := -f docker/compose.kind.yml
+else
+  COMPOSE_FILE := -f compose.yml
+endif
+
 .PHONY: *
+
+help: ## 도움말 출력
+	@echo "Usage: make [target] [PRJ=crawler|k8s]"
+	@echo ""
+	@echo "Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # --- Ollama ---
 # ollama pull gemma4:31b-cloud
@@ -45,30 +59,32 @@ claude:
 	ollama launch claude --model gemma4:31b-cloud -- --dangerously-skip-permissions
 
 # --- Infrastructure ---
-up:
-	docker compose up -d
+up: ## 컨테이너 실행 (PRJ=k8s 가능)
+	docker compose $(COMPOSE_FILE) up -d
 
-down:
-	docker compose down
+down: ## 컨테이너 정지
+	docker compose $(COMPOSE_FILE) down
 
-restart: down up
+restart: ## 재시작
+	$(MAKE) down
+	$(MAKE) up
 
-build:
-	docker compose build
+build: ## 이미지 빌드
+	docker compose $(COMPOSE_FILE) build
 
-logs:
-	docker compose logs -f
+logs: ## 로그 확인
+	docker compose $(COMPOSE_FILE) logs -f
 
-ps:
+ps: ## 컨테이너 상태 확인 (실시간)
 	watch -d -t -c -n 5 "echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] 🚀 CONTAINER STATUS\" && docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' | (read -r header; echo \"\$$header\"; sort -k2,3 -r)"
 
-top:
+top: ## 리소스 사용량 확인 (실시간)
 	watch -d -t -c -n 5 "echo \"[$$(date +'%Y-%m-%d %H:%M:%S')] 🚀 CONTAINER STATS\" && docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}'"
 
 # --- Collection & Testing ---
 # Example: make test SOURCE=PyTorchKR PAGE=1 LOG_LEVEL=DEBUG
-test:
-	docker compose run --rm -v .:/app -w /app -e LOG_LEVEL=$(LOG_LEVEL) \
+test: ## 로컬 테스트 수집 실행
+	docker compose $(COMPOSE_FILE) run --rm -v .:/app -w /app -e LOG_LEVEL=$(LOG_LEVEL) \
 		worker uv run python -m app.main \
 		--source $(SOURCE) \
 		--date $(DATE) \
@@ -87,8 +103,8 @@ debug:
 		--page $(PAGE) \
 		--out_path $(OUT_PATH)
 
-pytest:
-	docker compose run --rm -v .:/app worker uv run pytest -v -s tests/ 
+pytest: ## 유닛 테스트 실행
+	docker compose $(COMPOSE_FILE) run --rm -v .:/app worker uv run pytest -v -s tests/ 
 
 # Example: make run START_DATE=2026-04-18 END_DATE=2026-04-18
 run:
@@ -98,7 +114,7 @@ run:
 		echo "Processing date: $$current_date"; \
 		for page in 1 2 3 4 5; do \
 			echo "Executing: Date=$$current_date, Page=$$page"; \
-			docker compose -f docker/compose.worker.yml run --rm worker \
+			docker compose $(COMPOSE_FILE) -f docker/compose.worker.yml run --rm worker \
 				uv run python -m app.main \
 				--source $(SOURCE) \
 				--date $$current_date \
@@ -109,12 +125,12 @@ run:
 
 # --- Airflow ---
 # Example: make backfill SOURCE=GeekNews START_DATE=2023-04-01 END_DATE=2024-06-17
-backfill:
+backfill: ## Airflow Backfill 실행 (날짜 범위 반복)
 	@current_date=$(END_DATE); \
 	until [[ "$$current_date" < "$(START_DATE)" ]]; do \
 		echo "------------------------------------------"; \
 		echo "Backfilling date: $$current_date"; \
-		docker compose exec airflow airflow dags backfill \
+		docker compose $(COMPOSE_FILE) exec airflow airflow dags backfill \
 			-s $$current_date -e $$current_date $(DAG_ID); \
 		current_date=$$(date -I -d "$$current_date - 1 day"); \
 	done
@@ -122,37 +138,37 @@ backfill:
 # Example: make backfill START_DATE=2023-04-01 END_DATE=2026-04-10
 # Example: make backfill START_DATE=2026-03-01 END_DATE=2026-03-31
 backfill-rg:
-	docker compose exec airflow airflow dags backfill \
+	docker compose $(COMPOSE_FILE) exec airflow airflow dags backfill \
 	  -s $(START_DATE) -e $(END_DATE) $(DAG_ID)
 
 # Example: make clear START_DATE=2026-04-01 END_DATE=2026-04-17
 clear:
-	docker compose exec -T airflow airflow tasks clear -y \
+	docker compose $(COMPOSE_FILE) exec -T airflow airflow tasks clear -y \
 	  -s $(START_DATE) -e $(END_DATE) $(DAG_ID)
 
 reset-pw:
-	docker compose exec airflow \
+	docker compose $(COMPOSE_FILE) exec airflow \
 		airflow users reset-password \
 			--username admin --password admin
 
 # --- Database ---
-mongo-bash:
-	docker compose exec mongodb mongosh crawler_db
+mongo-bash: ## MongoDB 쉘 접속
+	docker compose $(COMPOSE_FILE) exec mongodb mongosh crawler_db
 
 pg-bash:
-	docker compose exec postgres bash
+	docker compose $(COMPOSE_FILE) exec postgres bash
 
 # /opt/airflow/dags/
 # /opt/airflow/logs/dag_id=geeknews/
 airflow-bash:
-	docker compose exec airflow bash
+	docker compose $(COMPOSE_FILE) exec airflow bash
 
 worker-bash:
-	docker compose exec worker bash
+	docker compose $(COMPOSE_FILE) exec worker bash
 
 # DELETE FROM task_instance WHERE dag_id='geeknews';
 pgsql:
-	docker compose exec postgres psql -U airflow -d airflow
+	docker compose $(COMPOSE_FILE) exec postgres psql -U airflow -d airflow
 
 init-net:
 	docker network create -d bridge $(NET_NAME)
@@ -162,6 +178,8 @@ ipconfig:
 	@echo "Docker Networks and Subnets"
 	@docker network ls -q | xargs docker network inspect --format '{{.Name}}: {{range .IPAM.Config}}{{.Subnet}}{{end}}'
 
-ls-net:
-	@NET_NAME=$$(docker network ls --filter "label=com.docker.compose.project=$$(basename $$(pwd))" --format "{{.Name}}" | head -n 1); \
+ls-net: ## Docker 네트워크 상세 정보 확인 (프로젝트별)
+	@PROJECT_NAME=$$(docker compose $(COMPOSE_FILE) config | grep '^name:' | awk '{print $$2}'); \
+	NET_NAME=$$(docker network ls --filter "label=com.docker.compose.project=$$PROJECT_NAME" --format "{{.Name}}" | head -n 1); \
+	if [ -z "$$NET_NAME" ]; then echo "No network found for project $$PROJECT_NAME"; exit 1; fi; \
 	{ echo -e "NETWORK\tNAME\tIP_ADDRESS"; docker network inspect $$NET_NAME --format "{{range .Containers}}$$NET_NAME	{{.Name}}	{{.IPv4Address}}{{\"\n\"}}{{end}}"; } | column -t
