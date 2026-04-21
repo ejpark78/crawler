@@ -161,3 +161,7 @@ init-net:
 ipconfig:
 	@echo "Docker Networks and Subnets"
 	@docker network ls -q | xargs docker network inspect --format '{{.Name}}: {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+
+ls-net:
+	@NET_NAME=$$(docker network ls --filter "label=com.docker.compose.project=$$(basename $$(pwd))" --format "{{.Name}}" | head -n 1); \
+	{ echo -e "NETWORK\tNAME\tIP_ADDRESS"; docker network inspect $$NET_NAME --format "{{range .Containers}}$$NET_NAME	{{.Name}}	{{.IPv4Address}}{{\"\n\"}}{{end}}"; } | column -t
