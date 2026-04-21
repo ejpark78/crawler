@@ -42,7 +42,7 @@ logout:
 	ollama signout
 
 claude:
-	ollama launch claude --model gemma4:31b-cloud
+	ollama launch claude --model gemma4:31b-cloud -- --dangerously-skip-permissions
 
 # --- Infrastructure ---
 up:

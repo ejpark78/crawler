@@ -16,11 +16,11 @@ if [ ! -f "$HOME/.xinputrc" ]; then
     echo "run_im fcitx" > "$HOME/.xinputrc"
 fi
 
-# 3. Start fcitx if it's not already running
+# 4. Start fcitx if it's not already running
 # Kasm's window manager startup might not always trigger autostart correctly.
 if ! pgrep -x "fcitx" > /dev/null; then
     echo "Starting fcitx-daemon..."
     fcitx -dr
 fi
 
-echo "Korean Input initialization complete."
+echo "Korean Input and Zsh initialization complete."
