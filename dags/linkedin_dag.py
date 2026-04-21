@@ -44,7 +44,7 @@ with DAG(
     dag_id="linkedin",
     default_args=default_args,
     start_date=days_ago(1),
-    schedule_interval=timedelta(hours=2),
+    schedule_interval=timedelta(hours=3),
     catchup=False,
     tags=["Crawler", "LinkedIn", "Browser"],
     max_active_runs=int(os.getenv("LINKEDIN_MAX_ACTIVE_RUNS", 2)),

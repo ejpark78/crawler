@@ -24,8 +24,8 @@ PAGES = list(range(1, 6))
 with DAG(
     dag_id="geeknews",
     start_date=days_ago(7),
-    schedule_interval=timedelta(hours=2),
-    catchup=True,
+    schedule_interval=timedelta(hours=3),
+    catchup=False,
     tags=["Crawler", "GeekNews"],
     max_active_runs=int(os.getenv("GEEKNEWS_MAX_ACTIVE_RUNS", 2)),
     concurrency=int(os.getenv("GEEKNEWS_CONCURRENCY", 1)),
