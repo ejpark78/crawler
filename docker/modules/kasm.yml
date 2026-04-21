@@ -10,7 +10,7 @@
 services:
   kasm:
     build:
-      context: ../docker/kasm
+      context: ../services/kasm
       dockerfile: Dockerfile
     image: crawler/kasm:latest
     restart: unless-stopped

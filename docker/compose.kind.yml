@@ -2,6 +2,6 @@
 name: k8s
 
 include:
-  - compose.traefik.yml
-  - compose.kasm.yml
-  - compose.k8s.yml
+  - modules/traefik.yml
+  - modules/kasm.yml
+  - modules/k8s.yml

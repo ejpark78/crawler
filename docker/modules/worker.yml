@@ -5,7 +5,7 @@
 services:
   worker:
     build:
-      context: ..
-      dockerfile: docker/app/Dockerfile
+      context: ../..
+      dockerfile: docker/services/app/Dockerfile
     image: crawler/worker:latest
     restart: no

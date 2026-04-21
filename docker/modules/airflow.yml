@@ -9,8 +9,8 @@
 services:
   airflow:
     build:
-      context: ..
-      dockerfile: docker/airflow/Dockerfile
+      context: ../..
+      dockerfile: docker/services/airflow/Dockerfile
     image: crawler/airflow:latest
     restart: unless-stopped
     user: "root"
@@ -30,8 +30,8 @@ services:
       - GEEKNEWS_MAX_ACTIVE_RUNS=${GEEKNEWS_MAX_ACTIVE_RUNS-2}
       - GEEKNEWS_CONCURRENCY=${GEEKNEWS_CONCURRENCY-2}
     volumes:
-      - ..:/app
-      - ../dags:/opt/airflow/dags:ro
+      - ../..:/app
+      - ../../dags:/opt/airflow/dags:ro
       - ${VOLUME_PATH}/airflow/logs:/opt/airflow/logs
       - /var/run/docker.sock:/var/run/docker.sock
     labels:

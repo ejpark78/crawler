@@ -2,7 +2,7 @@
 services:
   control-plane:
     build:
-      context: ../docker/kind
+      context: ../services/kind
       dockerfile: Dockerfile
       args:
         - K8S_VERSION=v1.35.1
@@ -12,7 +12,7 @@ services:
       - DOCKER_TLS_CERTDIR= # DinD 사용 시 인증서 충돌 방지
     volumes:
       - /lib/modules:/lib/modules:ro
-      - /home/ejpark/workspace/crawler/docker/kind/init.sh:/init.sh
+      - /home/ejpark/workspace/crawler/docker/services/kind/init.sh:/init.sh
     tmpfs:
       - /run
       - /run/lock
@@ -27,7 +27,7 @@ services:
 
   worker:
     build:
-      context: ../docker/kind
+      context: ../services/kind
       dockerfile: Dockerfile
       args:
         - K8S_VERSION=v1.35.1

@@ -11,8 +11,8 @@
 name: crawler
 
 include:
-  - compose.traefik.yml
-  - compose.kasm.yml
-  - compose.mongo.yml
-  - compose.airflow.yml
-  - compose.worker.yml
+  - modules/traefik.yml
+  - modules/kasm.yml
+  - modules/mongo.yml
+  - modules/airflow.yml
+  - modules/worker.yml
