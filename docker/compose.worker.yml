@@ -9,9 +9,3 @@ services:
       dockerfile: docker/app/Dockerfile
     image: crawler/worker:latest
     restart: no
-    networks:
-      - airflow-net
-
-networks:
-  airflow-net:
-    external: true

@@ -39,8 +39,6 @@ services:
       - "traefik.http.routers.airflow.rule=Host(`af.localhost`)"
       - "traefik.http.routers.airflow.entrypoints=web"
       - "traefik.http.services.airflow.loadbalancer.server.port=8080"
-    networks:
-      - airflow-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,8 +57,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - ${VOLUME_PATH}/postgres:/var/lib/postgresql/data
-    networks:
-      - airflow-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow"]
       interval: 10s
@@ -83,8 +79,6 @@ services:
       - "traefik.http.middlewares.pgadmin-stripprefix.stripprefix.prefixes="
       - "traefik.http.middlewares.pgadmin-scriptname.headers.customrequestheaders.X-Script-Name="
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
-    networks:
-      - airflow-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,7 +87,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-networks:
-  airflow-net:
-    external: true

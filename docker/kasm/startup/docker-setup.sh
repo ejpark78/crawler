@@ -21,7 +21,7 @@ if [ -S "$DOCKER_SOCK" ]; then
     # Add user to the group
     if ! id -nG "$USER" | grep -qw "$GROUP_NAME"; then
         echo "Adding $USER to group $GROUP_NAME"
-        sudo usermod -aG "$GROUP_NAME" "$USER"
+        sudo usermod -aG "$GROUP_NAME" "kasm-user"
     fi
 else
     echo "Warning: /var/run/docker.sock not found. Docker CLI will not work."

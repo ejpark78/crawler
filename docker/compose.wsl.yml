@@ -1,0 +1,8 @@
+
+services:
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/wsl/Dockerfile
+    image: local/wsl:latest
+    restart: no

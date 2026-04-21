@@ -138,9 +138,13 @@ RUN echo "kasm-user ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
 RUN ZSH=/etc/skel/.oh-my-zsh sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
     && git clone https://github.com/zsh-users/zsh-autosuggestions /etc/skel/.oh-my-zsh/custom/plugins/zsh-autosuggestions \
     && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git /etc/skel/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting \
-    && git clone https://github.com/jeffreytse/zsh-web-search /etc/skel/.oh-my-zsh/custom/plugins/zsh-web-search \
-    && git clone https://github.com/jscottsmith/zsh-git-prompt.git /etc/skel/.oh-my-zsh/custom/plugins/zsh-git-prompt \
-    && sed -i 's/plugins=(git)/plugins=(git zsh-git-prompt sudo docker web-search zsh-autosuggestions zsh-syntax-highlighting fzf-tab)/' /etc/skel/.zshrc
+    && git clone https://github.com/Aloxaf/fzf-tab /etc/skel/.oh-my-zsh/custom/plugins/fzf-tab \
+    && sed -i 's/export ZSH="\/etc\/skel\/.oh-my-zsh"/export ZSH="$HOME\/.oh-my-zsh"/' /home/kasm-user/.zshrc \
+    && sed -i 's/plugins=(git)/plugins=(git git-prompt sudo docker web-search zsh-autosuggestions zsh-syntax-highlighting fzf-tab)/' /home/kasm-user/.zshrc \
+    && echo '\n# Tilix VTE configuration\nif [ $TILIX_ID ] || [ $VTE_VERSION ]; then\n    source /etc/profile.d/vte-2.91.sh\nfi' >> /home/kasm-user/.zshrc \
+    && echo '\nalias docker="sudo docker"\n"' >> /home/kasm-user/.zshrc \
+    && cp /home/kasm-user/.zshrc /etc/skel/.zshrc \
+    && chown -R kasm-user:kasm-user /home/kasm-user
 
 USER kasm-user
 

@@ -11,8 +11,6 @@ services:
     restart: unless-stopped
     volumes:
       - ${VOLUME_PATH}/mongodb:/data/db
-    networks:
-      - airflow-net
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -34,8 +32,6 @@ services:
       - "traefik.http.routers.mongo-express.rule=Host(`me.localhost`)"
       - "traefik.http.routers.mongo-express.entrypoints=web"
       - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
-    networks:
-      - airflow-net
     depends_on:
       - mongodb
     healthcheck:
@@ -43,7 +39,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-networks:
-  airflow-net:
-    external: true

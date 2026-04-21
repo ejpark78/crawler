@@ -20,8 +20,6 @@ services:
       - "traefik.http.routers.traefik_dash.rule=Host(`dash.localhost`)"
       - "traefik.http.routers.traefik_dash.service=api@internal"
       - "traefik.http.routers.traefik_dash.entrypoints=web"
-    networks:
-      - airflow-net
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s
@@ -35,7 +33,3 @@ services:
       - "--ping=true"
       - "--providers.file.filename=/etc/traefik/dynamic_conf.yml"
       - "--providers.file.watch=true"
-
-networks:
-  airflow-net:
-    external: true

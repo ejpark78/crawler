@@ -35,20 +35,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     labels:
       - "traefik.enable=true"
+      - "traefik.enable=true"
       - "traefik.http.routers.kasm.rule=Host(`kasm.localhost`)"
       - "traefik.http.routers.kasm.entrypoints=web"
       - "traefik.http.services.kasm.loadbalancer.server.port=6901"
       - "traefik.http.services.kasm.loadbalancer.server.scheme=https"
       - "traefik.http.services.kasm.loadbalancer.serversTransport=kasmTransport@file"
-    networks:
-      - airflow-net
     healthcheck:
       test: ["CMD", "curl", "-k", "https://localhost:6901/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
-
-networks:
-  airflow-net:
-    external: true
