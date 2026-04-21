@@ -19,11 +19,11 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.utils.dates import days_ago
 
-PAGES = list(range(1, 6))
+PAGES = list(range(1, 4))
 
 with DAG(
     dag_id="geeknews",
-    start_date=days_ago(7),
+    start_date=days_ago(3),
     schedule_interval=timedelta(hours=3),
     catchup=False,
     tags=["Crawler", "GeekNews"],
