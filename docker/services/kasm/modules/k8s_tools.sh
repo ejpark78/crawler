@@ -10,7 +10,14 @@ echo "Installing Kubernetes tools..."
 
 echo "# 1. Installing kubectl..."
 KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+# Detect architecture
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64)  K8S_ARCH="amd64" ;;
+    aarch64) K8S_ARCH="arm64" ;;
+    *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
+esac
+curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${K8S_ARCH}/kubectl"
 install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 rm kubectl
 
@@ -18,7 +25,7 @@ echo "# 2. Installing helm..."
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
 echo "# 3. Installing k9s..."
-K9S_JSON=$(curl -s "https://api.github.com/repos/derailed/k9s/releases/latest")
+K9S_JSON=$(curl -sL "https://api.github.com/repos/derailed/k9s/releases/latest")
 K9S_VERSION=$(echo "$K9S_JSON" | grep -Po '"tag_name": "v\K[^"]*' || true)
 if [ -z "$K9S_VERSION" ]; then
     echo "Error: Could not determine k9s version from GitHub API."
@@ -37,7 +44,7 @@ ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx
 ln -sf /opt/kubectx/kubens /usr/local/bin/kubens
 
 echo "# 5. Installing stern..."
-STERN_JSON=$(curl -s "https://api.github.com/repos/stern/stern/releases/latest")
+STERN_JSON=$(curl -sL "https://api.github.com/repos/stern/stern/releases/latest")
 STERN_VERSION=$(echo "$STERN_JSON" | grep -Po '"tag_name": "v\K[^"]*' || true)
 if [ -z "$STERN_VERSION" ]; then
     echo "Error: Could not determine stern version from GitHub API."
@@ -51,14 +58,14 @@ mv stern /usr/local/bin/stern
 rm stern.tar.gz
 
 echo "# 6. Installing cilium cli..."
-CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+CILIUM_CLI_VERSION=$(curl -sL https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
 curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-amd64.tar.gz"
 tar xzf cilium-linux-amd64.tar.gz
 mv cilium /usr/local/bin
 rm cilium-linux-amd64.tar.gz
 
 echo "# 7. Installing calicoctl..."
-CALICO_JSON=$(curl -s "https://api.github.com/repos/projectcalico/calico/releases/latest")
+CALICO_JSON=$(curl -sL "https://api.github.com/repos/projectcalico/calico/releases/latest")
 CALICO_VERSION=$(echo "$CALICO_JSON" | grep -Po '"tag_name": "\K[^"]*' || true)
 if [ -z "$CALICO_VERSION" ]; then
     echo "Error: Could not determine calico version from GitHub API."
@@ -77,7 +84,15 @@ apt-get update && apt-get install -y --no-install-recommends \
     libfuse2 libgbm1 libasound2t64 libnss3 libxshmfence1 libatk1.0-0 \
     libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 libsecret-1-0
 
-HEADLAMP_JSON=$(curl -s "https://api.github.com/repos/headlamp-k8s/headlamp/releases/latest")
+# Detect architecture
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64)  DEB_ARCH="amd64" ;;
+    aarch64) DEB_ARCH="arm64" ;;
+    *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
+esac
+
+HEADLAMP_JSON=$(curl -sL "https://api.github.com/repos/headlamp-k8s/headlamp/releases/latest")
 HEADLAMP_VERSION=$(echo "$HEADLAMP_JSON" | grep -Po '"tag_name": "v\K[^"]*' || true)
 
 if [ -z "$HEADLAMP_VERSION" ]; then
@@ -88,7 +103,7 @@ fi
 echo "Headlamp version: $HEADLAMP_VERSION"
 
 set -x
-curl -Lo headlamp.deb "https://github.com/headlamp-k8s/headlamp/releases/download/v${HEADLAMP_VERSION}/headlamp_${HEADLAMP_VERSION}_amd64.deb"
+curl -Lfo headlamp.deb "https://github.com/headlamp-k8s/headlamp/releases/download/v${HEADLAMP_VERSION}/headlamp_${HEADLAMP_VERSION}_${DEB_ARCH}.deb"
 if ! apt-get install -y --no-install-recommends ./headlamp.deb; then
     echo "Warning: apt-get install ./headlamp.deb failed, trying with --fix-broken"
     apt-get install -y --fix-broken
@@ -112,7 +127,7 @@ fi
 
 # 9. Installing istioctl...
 echo "# 9. Installing istioctl..."
-ISTIO_JSON=$(curl -s https://api.github.com/repos/istio/istio/releases/latest)
+ISTIO_JSON=$(curl -sL https://api.github.com/repos/istio/istio/releases/latest)
 ISTIO_VERSION=$(echo "$ISTIO_JSON" | grep -Po '"tag_name": "\K[^"]*' || true)
 
 if [ -z "$ISTIO_VERSION" ]; then
