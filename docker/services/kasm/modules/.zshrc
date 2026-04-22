@@ -62,3 +62,8 @@ export DefaultIMModule=fcitx
 
 # opencode & claude
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/usr/local/bin/opencode:/usr/local/bin/claude:/usr/local/share/playwright:$PATH
+
+# Tilix VTE configuration
+if [ $TILIX_ID ] || [ $VTE_VERSION ]; then
+    source /etc/profile.d/vte-2.91.sh
+fi

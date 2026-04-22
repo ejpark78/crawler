@@ -84,26 +84,8 @@ apt-get update && apt-get install -y --no-install-recommends \
     libfuse2 libgbm1 libasound2t64 libnss3 libxshmfence1 libatk1.0-0 \
     libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 libsecret-1-0
 
-# Detect architecture
-ARCH=$(uname -m)
-case $ARCH in
-    x86_64)  DEB_ARCH="amd64" ;;
-    aarch64) DEB_ARCH="arm64" ;;
-    *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
-esac
-
-HEADLAMP_JSON=$(curl -sL "https://api.github.com/repos/headlamp-k8s/headlamp/releases/latest")
-HEADLAMP_VERSION=$(echo "$HEADLAMP_JSON" | grep -Po '"tag_name": "v\K[^"]*' || true)
-
-if [ -z "$HEADLAMP_VERSION" ]; then
-    echo "Error: Could not determine Headlamp version from GitHub API."
-    echo "Response: $HEADLAMP_JSON"
-    exit 1
-fi
-echo "Headlamp version: $HEADLAMP_VERSION"
-
 set -x
-curl -Lfo headlamp.deb "https://github.com/headlamp-k8s/headlamp/releases/download/v${HEADLAMP_VERSION}/headlamp_${HEADLAMP_VERSION}_${DEB_ARCH}.deb"
+curl -Lfo headlamp.deb "https://github.com/kubernetes-sigs/headlamp/releases/download/v0.41.0/headlamp_0.41.0-1_amd64.deb"
 if ! apt-get install -y --no-install-recommends ./headlamp.deb; then
     echo "Warning: apt-get install ./headlamp.deb failed, trying with --fix-broken"
     apt-get install -y --fix-broken
@@ -125,7 +107,6 @@ else
     echo "Warning: /usr/bin/headlamp not found, skip patching"
 fi
 
-# 9. Installing istioctl...
 echo "# 9. Installing istioctl..."
 ISTIO_JSON=$(curl -sL https://api.github.com/repos/istio/istio/releases/latest)
 ISTIO_VERSION=$(echo "$ISTIO_JSON" | grep -Po '"tag_name": "\K[^"]*' || true)
