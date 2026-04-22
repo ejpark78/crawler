@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-rm -rf /root/.kube/config
-rm -rf /root/.kube/join.sh
-
 kubeadm reset -f
+
+rm -rf /root/.kube/config
+rm -rf /root/.kube/cache
+rm -rf /root/.kube/state
+rm -rf /root/.kube/tmp
