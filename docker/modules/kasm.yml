@@ -28,6 +28,7 @@ services:
         - MODULE_CHROME=${MODULE_CHROME:-true}
         - MODULE_FIREFOX=${MODULE_FIREFOX:-false}
         - MODULE_MONGO_COMPASS=${MODULE_MONGO_COMPASS:-true}
+        - MODULE_K8S_TOOLS=${MODULE_K8S_TOOLS:-true}
     image: crawler/kasm:latest
     restart: unless-stopped
     shm_size: "1gb"

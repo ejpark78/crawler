@@ -19,9 +19,13 @@ install_module() {
     if [ "$enabled" = "true" ]; then
         echo "Installing module: $name..."
         if [ -f "$MODULES_DIR/$script" ]; then
-            bash "$MODULES_DIR/$script"
+            if ! bash "$MODULES_DIR/$script"; then
+                echo "Error: Installation of module $name failed!"
+                exit 1
+            fi
         else
-            echo "Warning: Script $script not found in $MODULES_DIR"
+            echo "Error: Script $script not found in $MODULES_DIR"
+            exit 1
         fi
     else
         echo "Skipping module: $name"
@@ -44,5 +48,6 @@ install_module "Antigravity" "antigravity.sh" "$MODULE_ANTIGRAVITY"
 install_module "Chrome" "chrome.sh" "$MODULE_CHROME"
 install_module "Firefox" "firefox.sh" "$MODULE_FIREFOX"
 install_module "Mongo Compass" "mongo_compass.sh" "$MODULE_MONGO_COMPASS"
+install_module "K8s Tools" "k8s_tools.sh" "$MODULE_K8S_TOOLS"
 
 echo "Modular installation completed."
