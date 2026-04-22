@@ -22,6 +22,7 @@ ARG MODULE_CHROME=true
 ARG MODULE_FIREFOX=false
 ARG MODULE_MONGO_COMPASS=false
 ARG MODULE_K8S_TOOLS=true
+ARG MODULE_SSHD=true
 
 # 1. 환경 변수 설정
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -75,4 +76,5 @@ USER kasm-user
 RUN im-config -n fcitx
 
 WORKDIR /home/kasm-user
+
 EXPOSE 6901

@@ -49,5 +49,6 @@ install_module "Chrome" "chrome.sh" "$MODULE_CHROME"
 install_module "Firefox" "firefox.sh" "$MODULE_FIREFOX"
 install_module "Mongo Compass" "mongo_compass.sh" "$MODULE_MONGO_COMPASS"
 install_module "K8s Tools" "k8s_tools.sh" "$MODULE_K8S_TOOLS"
+install_module "SSHD" "sshd.sh" "$MODULE_SSHD"
 
 echo "Modular installation completed."

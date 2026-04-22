@@ -29,6 +29,7 @@ services:
         - MODULE_FIREFOX=${MODULE_FIREFOX:-true}
         - MODULE_MONGO_COMPASS=${MODULE_MONGO_COMPASS:-true}
         - MODULE_K8S_TOOLS=${MODULE_K8S_TOOLS:-true}
+        - MODULE_SSHD=${MODULE_SSHD:-true}
     image: crawler/kasm:latest
     restart: unless-stopped
     shm_size: "1gb"
