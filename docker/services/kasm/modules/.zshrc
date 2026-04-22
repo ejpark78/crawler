@@ -10,15 +10,15 @@ ENABLE_CORRECTION="true"
 DISABLE_UNTRACKED_FILES_DIRTY="true"
 
 plugins=(
-  git 
   docker 
-  helm 
-  fzf 
-  zsh-autosuggestions 
-  zsh-syntax-highlighting
+  fzf-tab 
+  git 
   git-prompt
+  helm 
   sudo 
   web-search
+  zsh-autosuggestions 
+  zsh-syntax-highlighting
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -62,8 +62,3 @@ export DefaultIMModule=fcitx
 
 # opencode & claude
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/usr/local/bin/opencode:/usr/local/bin/claude:/usr/local/share/playwright:$PATH
-
-# Tilix VTE configuration
-if [ $TILIX_ID ] || [ $VTE_VERSION ]; then
-    source /etc/profile.d/vte-2.91.sh
-fi
