@@ -174,9 +174,18 @@ init-net:
 	docker network create -d bridge $(NET_NAME)
 	docker network ls
 
-ipconfig:
-	@echo "Docker Networks and Subnets"
-	@docker network ls -q | xargs docker network inspect --format '{{.Name}}: {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+ipconfig: ## 모든 Docker 네트워크 및 컨테이너 상세 정보 표시
+	@{ \
+	echo "NETWORK|SUBNET|CONTAINER|IP_ADDRESS"; \
+	for net in $$(docker network ls --format "{{.Name}}"); do \
+		subnet=$$(docker network inspect $$net --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}' | xargs); \
+		[ -z "$$subnet" ] && subnet="none"; \
+		docker network inspect $$net --format '{{range .Containers}}'$$net'|'$$subnet'|{{.Name}}|{{.IPv4Address}}{{"\n"}}{{end}}' | grep . || \
+		echo "$$net|$$subnet|-|-"; \
+	done; \
+	} | column -t -s '|'
+
+
 
 ls-net: ## Docker 네트워크 상세 정보 확인 (프로젝트별)
 	@PROJECT_NAME=$$(docker compose $(COMPOSE_FILE) config | grep '^name:' | awk '{print $$2}'); \
