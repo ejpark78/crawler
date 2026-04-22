@@ -1,7 +1,0 @@
-
-name: k8s
-
-include:
-  - modules/traefik.yml
-  - modules/kasm.yml
-  - modules/k8s.yml

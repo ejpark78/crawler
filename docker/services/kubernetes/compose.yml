@@ -2,11 +2,11 @@
 services:
   control-plane:
     build:
-      context: ../services/kind
+      context: .
       dockerfile: Dockerfile
       args:
         - K8S_VERSION=v1.35.1
-    image: local/kind:v1.35.1
+    image: local/kubernetes:v1.35.1
     privileged: true
     hostname: control-plane
     environment:
@@ -15,7 +15,7 @@ services:
       - kube:/root/.kube:rw
       - ssh_keys:/root/.ssh:rw
       - /lib/modules:/lib/modules:ro
-      - /home/ejpark/workspace/crawler/docker/services/kind/startup/init.sh:/init.sh:ro
+      - ./startup:/startup:ro
     tmpfs:
       - /run
       - /run/lock
@@ -30,11 +30,11 @@ services:
 
   worker:
     build:
-      context: ../services/kind
+      context: .
       dockerfile: Dockerfile
       args:
         - K8S_VERSION=v1.35.1
-    image: local/kind:v1.35.1
+    image: local/kubernetes:v1.35.1
     privileged: true
     deploy:
       replicas: 1

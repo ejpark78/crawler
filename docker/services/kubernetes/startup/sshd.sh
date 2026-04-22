@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+#
+# SSH 서버 설정 및 실행 모듈
+# 이 스크립트는 컨테이너 내부의 SSH 서버를 설정하고 실행합니다.
+# RSA 키 쌍이 없는 경우 새로 생성하며, 노드 간 통신 및 외부 접속을 위한 권한 설정을 수행합니다.
+#
+
 set -e  # 에러 발생 시 즉시 중단
 
 echo "Starting SSH server setup..."

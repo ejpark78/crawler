@@ -32,7 +32,7 @@ NET_NAME = airflow-net
 
 PRJ ?= crawler
 ifeq ($(PRJ),k8s)
-  COMPOSE_FILE := --env-file docker/.env.k8s -f docker/compose.kind.yml
+  COMPOSE_FILE := --env-file docker/.env.k8s -f docker/compose.kubernetes.yml
 else
   COMPOSE_FILE := --env-file docker/.env -f compose.yml
 endif

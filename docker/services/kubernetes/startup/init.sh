@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+#
+# Kubernetes Control Plane 초기화 및 Join 스크립트 생성 모듈
+# 이 스크립트는 kubeadm을 사용하여 클러스터를 초기화하고, 
+# 워커 노드가 클러스터에 참여할 수 있도록 join 명령어를 추출하여 저장합니다.
+#
+
 
 echo "# 1. 일단 이미지가 컨테이너 안에 있는지 확인"
 crictl images

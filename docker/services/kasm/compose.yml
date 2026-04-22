@@ -10,7 +10,7 @@
 services:
   kasm:
     build:
-      context: ../services/kasm
+      context: .
       dockerfile: Dockerfile
       args:
         - MODULE_FCITX=${MODULE_FCITX:-true}
