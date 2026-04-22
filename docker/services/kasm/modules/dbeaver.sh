@@ -14,4 +14,6 @@ apt-get update && apt-get install -y --no-install-recommends \
 
 add-apt-repository ppa:serge-rider/dbeaver-ce -y
 apt-get update && apt-get install -y --no-install-recommends dbeaver-ce
+
+apt-get autoremove -y --no-install-recommends 
 apt-get clean && rm -rf /var/lib/apt/lists/*

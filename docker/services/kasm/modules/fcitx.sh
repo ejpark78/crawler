@@ -31,4 +31,5 @@ if [ -d /home/kasm-user ]; then
     chown -R kasm-user:kasm-user /home/kasm-user
 fi
 
+apt-get autoremove -y --no-install-recommends 
 apt-get clean && rm -rf /var/lib/apt/lists/*

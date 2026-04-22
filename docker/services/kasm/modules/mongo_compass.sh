@@ -21,4 +21,5 @@ rm mongodb-compass.deb
 echo -e '#!/usr/bin/env bash\n/usr/bin/mongodb-compass --no-sandbox "$@"' > /usr/local/bin/mongodb-compass
 chmod +x /usr/local/bin/mongodb-compass
 
+apt-get autoremove -y --no-install-recommends 
 apt-get clean && rm -rf /var/lib/apt/lists/*

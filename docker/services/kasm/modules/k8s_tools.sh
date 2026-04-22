@@ -131,4 +131,7 @@ else
     fi
 fi
 
+apt-get autoremove -y --no-install-recommends 
+apt-get clean && rm -rf /var/lib/apt/lists/*
+
 echo "Kubernetes tools installation completed."

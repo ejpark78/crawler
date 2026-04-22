@@ -54,6 +54,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && locale-gen ko_KR.UTF-8 en_US.UTF-8 \
     && update-locale LANG=ko_KR.UTF-8 \
+    && apt-get autoremove -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 3. 선택적 모듈 설치 (모듈화된 스크립트 실행)

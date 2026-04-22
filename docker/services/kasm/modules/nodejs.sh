@@ -9,6 +9,8 @@ fi
 echo "Installing Node.js 20..."
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt-get update && apt-get install -y --no-install-recommends nodejs
+
+apt-get autoremove -y --no-install-recommends 
 apt-get clean && rm -rf /var/lib/apt/lists/*
 
 echo "Installing Bun..."

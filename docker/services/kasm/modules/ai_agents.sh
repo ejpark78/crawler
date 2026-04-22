@@ -9,20 +9,30 @@ echo "Installing AI Agents & Automation tools..."
 
 # Claude Code
 curl -fsSL https://claude.ai/install.sh | bash -
-# Move binary to global path if found in root's local bin
-if [ -f /root/.local/bin/claude ]; then
-    mv /root/.local/bin/claude /usr/local/bin/claude
+if [ -d ~/.local/share/claude ]; then
+    rm -rf /usr/local/share/claude
+    mv ~/.local/share/claude /usr/local/share/
+    chmod -R 755 /usr/local/share/claude
+    # Resolve the binary path (it's often a symlink to a versioned directory)
+    # If it's a symlink, we want the target to point to /usr/local/share
+    if [ -L ~/.local/bin/claude ]; then
+        CLAUDE_TARGET=$(readlink -f ~/.local/bin/claude | sed "s|$HOME/.local/share|/usr/local/share|")
+        ln -sf "$CLAUDE_TARGET" /usr/local/bin/claude
+    else
+        ln -sf /usr/local/share/claude/versions/$(ls /usr/local/share/claude/versions | head -n 1)/claude /usr/local/bin/claude
+    fi
     chmod +x /usr/local/bin/claude
+    rm -f ~/.local/bin/claude
 fi
 
 # OpenCode
 curl -fsSL https://opencode.ai/install | bash -
-# OpenCode installs to $HOME/.opencode/bin
-if [ -f /root/.opencode/bin/opencode ]; then
-    mv /root/.opencode/bin/opencode /usr/local/bin/opencode
+if [ -d ~/.opencode ]; then
+    rm -rf /usr/local/share/opencode
+    mv ~/.opencode /usr/local/share/opencode
+    chmod -R 755 /usr/local/share/opencode
+    ln -sf /usr/local/share/opencode/bin/opencode /usr/local/bin/opencode
     chmod +x /usr/local/bin/opencode
-    # Cleanup empty dir
-    rm -rf /root/.opencode
 fi
 
 # Playwright (Set global path for browsers to be accessible by kasm-user)

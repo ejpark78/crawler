@@ -20,4 +20,5 @@ rm google-chrome-stable_current_amd64.deb
 echo -e '#!/usr/bin/env bash\n/usr/bin/google-chrome-stable --no-sandbox --password-store=basic "$@"' > /usr/local/bin/google-chrome
 chmod +x /usr/local/bin/google-chrome
 
+apt-get autoremove -y --no-install-recommends 
 apt-get clean && rm -rf /var/lib/apt/lists/*

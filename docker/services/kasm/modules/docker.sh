@@ -14,4 +14,5 @@ apt-get update && apt-get install -y --no-install-recommends \
     docker-ce-cli \
     docker-compose-plugin
 
+apt-get autoremove -y --no-install-recommends 
 apt-get clean && rm -rf /var/lib/apt/lists/*

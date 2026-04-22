@@ -12,4 +12,5 @@ echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-cent
 apt-get update && apt-get install -y --no-install-recommends \
     antigravity
 
+apt-get autoremove -y --no-install-recommends 
 apt-get clean && rm -rf /var/lib/apt/lists/*
