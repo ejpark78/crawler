@@ -8,6 +8,8 @@ if [ ! -d "$HOME/.oh-my-zsh" ]; then
     echo "Syncing Oh My Zsh configuration from /etc/skel..."
     cp -rn /etc/skel/.oh-my-zsh "$HOME/" 2>/dev/null || true
     cp -n /etc/skel/.zshrc "$HOME/" 2>/dev/null || true
+
+    cp /modules/.zshrc "$HOME/.zshrc"
 fi
 
 echo "Oh My Zsh initialization complete."

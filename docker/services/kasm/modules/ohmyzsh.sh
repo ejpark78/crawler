@@ -16,7 +16,7 @@ git clone https://github.com/Aloxaf/fzf-tab /etc/skel/.oh-my-zsh/custom/plugins/
 # Initialize .zshrc in skel
 cp /etc/skel/.oh-my-zsh/templates/zshrc.zsh-template /etc/skel/.zshrc
 sed -i 's/export ZSH="\/etc\/skel\/.oh-my-zsh"/export ZSH="$HOME\/.oh-my-zsh"/' /etc/skel/.zshrc
-sed -i 's/plugins=(git)/plugins=(git git-prompt sudo docker web-search zsh-autosuggestions zsh-syntax-highlighting fzf-tab)/' /etc/skel/.zshrc
+sed -i 's/plugins=(git)/plugins=(git git-prompt sudo docker web-search zsh-autosuggestions zsh-syntax-highlighting fzf)/' /etc/skel/.zshrc
 
 echo -e '\n# Tilix VTE configuration\nif [ $TILIX_ID ] || [ $VTE_VERSION ]; then\n    source /etc/profile.d/vte-2.91.sh\nfi' >> /etc/skel/.zshrc
 echo -e '\nalias docker="sudo docker"\n' >> /etc/skel/.zshrc
