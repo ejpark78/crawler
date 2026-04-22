@@ -8,56 +8,48 @@ fi
 
 echo "Installing Kubernetes tools..."
 
-# 1. kubectl
-echo "Installing kubectl..."
+echo "# 1. Installing kubectl..."
 KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
 curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
 install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 rm kubectl
 
-# 2. helm
-echo "Installing helm..."
+echo "# 2. Installing helm..."
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-# 3. k9s
-echo "Installing k9s..."
+echo "# 3. Installing k9s..."
 K9S_VERSION=$(curl -s "https://api.github.com/repos/derailed/k9s/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
 curl -Lo k9s.tar.gz "https://github.com/derailed/k9s/releases/download/v${K9S_VERSION}/k9s_Linux_amd64.tar.gz"
 tar -xzf k9s.tar.gz k9s
 mv k9s /usr/local/bin/k9s
 rm k9s.tar.gz
 
-# 4. kubectx & kubens
-echo "Installing kubectx & kubens..."
+echo "# 4. Installing kubectx & kubens..."
 git clone https://github.com/ahmetb/kubectx /opt/kubectx
 ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx
 ln -sf /opt/kubectx/kubens /usr/local/bin/kubens
 
-# 5. stern
-echo "Installing stern..."
+echo "# 5. Installing stern..."
 STERN_VERSION=$(curl -s "https://api.github.com/repos/stern/stern/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
 curl -Lo stern.tar.gz "https://github.com/stern/stern/releases/download/v${STERN_VERSION}/stern_${STERN_VERSION}_linux_amd64.tar.gz"
 tar -xzf stern.tar.gz stern
 mv stern /usr/local/bin/stern
 rm stern.tar.gz
 
-# 6. cilium cli
-echo "Installing cilium cli..."
+echo "# 6. Installing cilium cli..."
 CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
 curl -L --fail --remote-name-all "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-amd64.tar.gz"
 tar xzf cilium-linux-amd64.tar.gz
 mv cilium /usr/local/bin
 rm cilium-linux-amd64.tar.gz
 
-# 7. calico cli (calicoctl)
-echo "Installing calicoctl..."
+echo "# 7. Installing calicoctl..."
 CALICO_VERSION=$(curl -s "https://api.github.com/repos/projectcalico/calico/releases/latest" | grep -Po '"tag_name": "\K[^"]*')
 curl -L "https://github.com/projectcalico/calico/releases/download/${CALICO_VERSION}/calicoctl-linux-amd64" -o calicoctl
 chmod +x calicoctl
 mv calicoctl /usr/local/bin/
 
-# 8. headlamp (Desktop App)
-echo "Installing headlamp..."
+echo "# 8. Installing headlamp..."
 
 # GUI Dependencies for Electron apps
 apt-get update && apt-get install -y --no-install-recommends \
@@ -79,8 +71,7 @@ if [ -f /usr/bin/headlamp ]; then
     fi
 fi
 
-# 9. istioctl
-echo "Installing istioctl..."
+echo "# 9. Installing istioctl..."
 curl -L https://istio.io/downloadIstio | ISTIO_VERSION=$(curl -s https://api.github.com/repos/istio/istio/releases/latest | grep -Po '"tag_name": "\K[^"]*') sh -
 cd istio-*
 mv bin/istioctl /usr/local/bin/
