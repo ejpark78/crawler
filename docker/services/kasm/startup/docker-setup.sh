@@ -19,8 +19,8 @@ if [ -S "$DOCKER_SOCK" ]; then
     fi
     
     # Add user to the group
-    if ! id -nG "$USER" | grep -qw "$GROUP_NAME"; then
-        echo "Adding $USER to group $GROUP_NAME"
+    if ! id -nG "kasm-user" | grep -qw "$GROUP_NAME"; then
+        echo "Adding kasm-user to group $GROUP_NAME"
         sudo usermod -aG "$GROUP_NAME" "kasm-user"
     fi
 else

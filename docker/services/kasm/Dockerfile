@@ -59,8 +59,9 @@ COPY modules/ /modules/
 RUN chmod +x /modules/*.sh && /modules/install.sh
 
 # 5. 시작 스크립트 설정
-COPY startup/* /dockerstartup/
-RUN chmod +x /dockerstartup/* \
+COPY startup/ /dockerstartup/custom_startup/
+RUN chmod +x /dockerstartup/custom_startup/*.sh \
+    && mv /dockerstartup/custom_startup/custom_startup.sh /dockerstartup/custom_startup.sh \
     && chown -R kasm-user:kasm-user /home/kasm-user
 
 # 6. 사용자 권한 설정 (Sudo)

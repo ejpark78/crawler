@@ -12,6 +12,22 @@ services:
     build:
       context: ../services/kasm
       dockerfile: Dockerfile
+      args:
+        - MODULE_FCITX=${MODULE_FCITX:-true}
+        - MODULE_OHMYZSH=${MODULE_OHMYZSH:-true}
+        - MODULE_DESKTOP_UTILS=${MODULE_DESKTOP_UTILS:-false}
+        - MODULE_UV=${MODULE_UV:-true}
+        - MODULE_NODEJS=${MODULE_NODEJS:-true}
+        - MODULE_AI_AGENTS=${MODULE_AI_AGENTS:-true}
+        - MODULE_VSCODE=${MODULE_VSCODE:-false}
+        - MODULE_DBEAVER=${MODULE_DBEAVER:-false}
+        - MODULE_BRAVE=${MODULE_BRAVE:-true}
+        - MODULE_JOPLIN=${MODULE_JOPLIN:-false}
+        - MODULE_DOCKER=${MODULE_DOCKER:-false}
+        - MODULE_ANTIGRAVITY=${MODULE_ANTIGRAVITY:-false}
+        - MODULE_CHROME=${MODULE_CHROME:-true}
+        - MODULE_FIREFOX=${MODULE_FIREFOX:-false}
+        - MODULE_MONGO_COMPASS=${MODULE_MONGO_COMPASS:-true}
     image: crawler/kasm:latest
     restart: unless-stopped
     shm_size: "1gb"
@@ -28,6 +44,7 @@ services:
       - XMODIFIERS=@im=fcitx
       - GTK_IM_MODULE=fcitx
       - QT_IM_MODULE=fcitx
+      - SHELL=/usr/bin/zsh
     volumes:
       - ${VOLUME_PATH}/kasm:/mnt
       - ${VOLUME_PATH}/kasm/home:/home/kasm-user
