@@ -52,6 +52,8 @@ services:
       - ${VOLUME_PATH}/kasm/home:/home/kasm-user
       - /home/ejpark/workspace:/home/kasm-user/workspace
       - /var/run/docker.sock:/var/run/docker.sock
+      - kube:/root/.kube:rw
+      - ssh_keys:/root/.ssh:ro
     labels:
       - "traefik.enable=true"
       - "${TRAEFIK_ENABLE_LABEL}=true"
@@ -66,3 +68,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+volumes:
+  kube:
+  ssh_keys:

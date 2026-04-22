@@ -12,9 +12,10 @@ services:
     environment:
       - DOCKER_TLS_CERTDIR= # DinD 사용 시 인증서 충돌 방지
     volumes:
+      - kube:/root/.kube:rw
       - ssh_keys:/root/.ssh:rw
       - /lib/modules:/lib/modules:ro
-      - /home/ejpark/workspace/crawler/docker/services/kind/init.sh:/init.sh
+      - /home/ejpark/workspace/crawler/docker/services/kind/startup/init.sh:/init.sh:ro
     tmpfs:
       - /run
       - /run/lock
@@ -40,6 +41,7 @@ services:
     environment:
       - DOCKER_TLS_CERTDIR=       
     volumes:
+      - kube:/root/.kube:rw
       - ssh_keys:/root/.ssh:rw
       - /lib/modules:/lib/modules:ro
     tmpfs:
@@ -56,4 +58,5 @@ services:
       retries: 3
 
 volumes:
+  kube:
   ssh_keys:

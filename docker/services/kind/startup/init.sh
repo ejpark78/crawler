@@ -25,4 +25,11 @@ kubeadm init \
   --config kubeadm-config.yaml \
   --skip-phases=addon/kube-proxy \
   --node-name=control-plane \
-  --ignore-preflight-errors=ImagePull
+  --ignore-preflight-errors=ImagePull \
+  | tee kubeadm-init.log
+
+grep -A 2 "kubeadm join " kubeadm-init.log | tee /root/.kube/join.sh
+chmod +x /root/.kube/join.sh
+
+cp -i /etc/kubernetes/admin.conf /root/.kube/config
+chown $(id -u):$(id -g) /root/.kube/config
