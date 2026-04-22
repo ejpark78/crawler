@@ -15,6 +15,9 @@ sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_
 sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 sed -i 's/#StrictHostKeyChecking ask/StrictHostKeyChecking no/' /etc/ssh/ssh_config
 
+echo "    StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+echo "    UserKnownHostsFile /dev/null" >> /etc/ssh/ssh_config
+
 # Cleanup apt
 apt-get autoremove -y --no-install-recommends
 apt-get clean && rm -rf /var/lib/apt/lists/*

@@ -8,9 +8,11 @@ services:
         - K8S_VERSION=v1.35.1
     image: local/kind:v1.35.1
     privileged: true
+    hostname: control-plane
     environment:
       - DOCKER_TLS_CERTDIR= # DinD 사용 시 인증서 충돌 방지
     volumes:
+      - ssh_keys:/root/.ssh:rw
       - /lib/modules:/lib/modules:ro
       - /home/ejpark/workspace/crawler/docker/services/kind/init.sh:/init.sh
     tmpfs:
@@ -38,6 +40,7 @@ services:
     environment:
       - DOCKER_TLS_CERTDIR=       
     volumes:
+      - ssh_keys:/root/.ssh:rw
       - /lib/modules:/lib/modules:ro
     tmpfs:
       - /run
@@ -51,3 +54,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+volumes:
+  ssh_keys:
