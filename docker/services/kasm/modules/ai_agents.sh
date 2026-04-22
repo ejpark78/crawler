@@ -41,7 +41,7 @@ if [ -d "$HOME/.local/share/claude" ] || [ -f "$HOME/.local/bin/claude" ]; then
             # Get the latest version (using version sort if possible)
             LATEST_VERSION=$(ls -1 /usr/local/share/claude/versions | sort -V 2>/dev/null | tail -n 1 || ls -1 /usr/local/share/claude/versions | tail -n 1)
             if [ -n "$LATEST_VERSION" ]; then
-                CLAUDE_BIN_PATH="/usr/local/share/claude/versions/$LATEST_VERSION/claude"
+                CLAUDE_BIN_PATH="/usr/local/share/claude/versions/$LATEST_VERSION"
                 echo "Found Claude version $LATEST_VERSION at $CLAUDE_BIN_PATH"
                 ln -sf "$CLAUDE_BIN_PATH" /usr/local/bin/claude
             fi
