@@ -10,6 +10,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: local/traefik:v3.6
     restart: always
     ports:
       - "${TRAEFIK_PORT}:80"

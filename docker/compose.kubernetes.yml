@@ -5,5 +5,3 @@ include:
   - services/traefik/compose.yml
   - services/kasm/compose.yml
   - services/kubernetes/compose.yml
-
-

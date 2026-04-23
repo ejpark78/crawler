@@ -16,4 +16,3 @@ include:
   - services/mongo/compose.yml
   - services/airflow/compose.yml
   - services/app/compose.yml
-

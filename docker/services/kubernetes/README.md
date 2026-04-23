@@ -8,68 +8,84 @@
        +-------------------------------------------------------+
        |                    호스트 머신 (Host)                   |
        +-------------------------------------------------------+
-                   | (포트 포워딩 2222:22)
-                   v
-+-----------------------------------+       +-----------------------------------+
-|      control-plane 컨테이너        |       |         worker 컨테이너           |
-|  (kindest/node + SSH + 커스텀)     |       |   (kindest/node + SSH + 커스텀)   |
-+-----------------------------------+       +-----------------------------------+
-| [주요 프로세스]                    |       | [주요 프로세스]                    |
-|  - kubelet                        |       |  - kubelet                        |
-|  - containerd                     |       |  - containerd                     |
-|  - sshd (22번 포트) <-------------+-------+--> sshd (22번 포트)               |
-|                                   |  SSH  |                                   |
-| [주요 파일 및 볼륨]                 |       | [주요 파일 및 볼륨]                 |
-|  - /init.sh (초기화 스크립트)       |       |                                   |
-|  - /root/.kube/config <-----------+-------+--> (공유 볼륨: kube)              |
-|  - /root/.kube/join.sh <----------+-------+--> (공유 볼륨: kube)              |
-|  - /root/.ssh/id_rsa <------------+-------+--> (공유 볼륨: ssh_keys)          |
-+-----------------------------------+       +-----------------------------------+
+                    | (docker exec / SSH)
+                    v
+ +-----------------------------------+       +-----------------------------------+
+ |      control-plane 컨테이너        |       |         worker 컨테이너           |
+ |  (kindest/node + SSH + 커스텀)     |       |   (kindest/node + SSH + 커스텀)   |
+ +-----------------------------------+       +-----------------------------------+
+ | [주요 프로세스]                    |       | [주요 프로세스]                    |
+ |  - kubelet                        |       |  - kubelet                        |
+ |  - containerd                     |       |  - containerd                     |
+ |  - sshd (22번 포트) <-------------+-------+--> sshd (22번 포트)               |
+ |                                   |  SSH  |                                   |
+ | [주요 파일 및 볼륨]                 |       | [주요 파일 및 볼륨]                 |
+ |  - /init.sh (초기화 스크립트)       |       |                                   |
+ |  - /root/.kube/config <-----------+-------+--> (공유 볼륨: kube)              |
+ |  - /root/.kube/join.sh <----------+-------+--> (공유 볼륨: kube)              |
+ |  - /root/.ssh/id_rsa <------------+-------+--> (공유 볼륨: ssh_keys)          |
+ +-----------------------------------+       +-----------------------------------+
                   |                                     ^
                   |           kubeadm init              |
                   +-------------------------------------+
                              kubeadm join
 ```
 
-## 🔄 Init -> Join 프로세스 관계
+---
 
-클러스터 구축은 `control-plane` 노드에서 시작하여 `worker` 노드가 참여하는 방식으로 이루어집니다.
+## 🛠️ 주요 구성 요소 및 도구
+
+### 1. 사전 설치된 도구 (Dockerfile)
+*   **Base Image**: `kindest/node:v1.35.1` (K8s v1.35.1 대응)
+*   **Helm**: Kubernetes 패키지 매니저 (`helm` 명령어 즉시 사용 가능)
+*   **CNI Plugins**: 표준 CNI 바이너리(bridge, portmap, loopback 등) 포함
+*   **K8s Tools**: `kubectl`, `kubeadm`, `kubelet` 외에도 운영에 필요한 유틸리티 포함
+*   **SSH 서버**: `openssh-server`를 통한 노드 간 키 기반 자동 접속 설정
+
+### 2. 네트워크 및 CNI 지원
+다양한 CNI(Container Network Interface)를 선택하여 클러스터를 구성할 수 있습니다.
+*   **지원 목록**: `flannel` (기본값), `calico`, `cilium`
+*   **설정 방식**: `make up CNI_NAME=calico`와 같이 실행 시 변수를 전달하면 `init.sh`에서 해당 CNI에 맞는 Pod Subnet을 자동으로 설정합니다.
+
+---
+
+## 🔄 클러스터 구축 프로세스
 
 1.  **`kubeadm init` (Control Plane)**:
-    *   `startup/init.sh` 스크립트가 실행되면서 `kubeadm init` 명령을 통해 마스터 노드를 초기화합니다.
-    *   초기화 과정에서 생성되는 로그에서 `kubeadm join` 명령어를 추출합니다.
-    *   추출된 명령어는 `/root/.kube/join.sh` 파일로 저장됩니다.
+    *   `startup/init.sh`가 실행되면서 `kubeadm-config.yaml`을 동적으로 생성하고 클러스터를 초기화합니다.
+    *   초기화 후 워커 노드용 `join.sh`를 생성하여 공유 볼륨(`kube`)에 저장합니다.
 
 2.  **`kubeadm join` (Worker)**:
-    *   `control-plane`과 `worker`는 `kube`라는 이름의 Docker 볼륨을 공유합니다.
-    *   `worker` 노드는 공유된 볼륨을 통해 `/root/.kube/join.sh` 파일에 접근할 수 있습니다.
-    *   `worker` 노드에서 이 스크립트를 실행함으로써 클러스터에 안전하게 참여하게 됩니다.
+    *   워커 노드는 `control-plane`의 헬스체크가 완료된 후 실행됩니다.
+    *   공유된 `join.sh`를 실행하여 자동으로 클러스터에 참여합니다.
 
-## 🛠️ 주요 구성 요소
+---
 
-### 1. Dockerfile
-*   **Base Image**: `kindest/node:v1.35.1` (버전은 ARG로 변경 가능)
-*   **Containerd 설정**: 스냅샷터를 `native`로, Cgroup 드라이버를 `systemd`로 설정하여 성능과 호환성을 높였습니다.
-*   **SSH 서버**: `openssh-server`를 설치하고 root 로그인을 허용(키 기반)하도록 설정했습니다.
-*   **보안**: 패스워드 인증을 비활성화하고 SSH 키 기반 인증만 허용합니다.
+## ⌨️ Makefile 명령어 가이드
 
-### 2. startup/sshd.sh
-*   컨테이너 시작 시 실행되는 엔트리포인트 스크립트입니다.
-*   `/root/.ssh` 디렉토리가 없거나 키 쌍이 없는 경우 자동으로 생성합니다.
-*   마운트된 볼륨 내의 키 파일 권한을 SSH 보안 요구사항(600, 700)에 맞게 강제 재설정합니다.
-*   `sshd` 데몬을 백그라운드에서 실행합니다.
+편리한 클러스터 관리를 위해 `Makefile`이 제공됩니다.
 
-### 3. startup/init.sh
-*   Kubernetes 클러스터 초기화를 담당합니다.
-*   `kubeadm-config.yaml`을 동적으로 생성하여 파드 서브넷 및 `cgroupDriver` 등을 설정합니다.
-*   `swapoff -a`를 통해 K8s 요구사항을 충족합니다.
-*   `join.sh`를 생성하고 `admin.conf`를 `~/.kube/config`로 복사하여 `kubectl` 사용 환경을 구축합니다.
+| 명령어 | 설명 | 비고 |
+| :--- | :--- | :--- |
+| `make build` | 컨트롤 플레인 이미지 빌드 | |
+| `make up` | 클러스터 실행 | `CNI_NAME=calico` 등 옵션 가능 |
+| `make init` | 마스터 노드 초기화 실행 | 컨테이너 내부 `init.sh` 호출 |
+| `make join` | 모든 워커 노드 조인 실행 | |
+| `make status` | 노드 및 파드 상태 확인 | `kubectl get nodes/pods` 결과 출력 |
+| `make scale` | 워커 노드 개수 조정 | `WORKERS=3` 옵션 사용 |
+| `make control-plane` | 마스터 노드 쉘 접속 | `docker exec` 방식 |
+| `make down` | 클러스터 완전 정지 및 삭제 | |
 
-## 🔑 SSH 접속 및 보안
+---
 
-*   **호스트 -> 컨테이너**: 호스트에 생성된 `.pem` 키(또는 `id_rsa`)를 사용하여 `ssh -i <key> root@localhost -p 2222`로 접속 가능합니다.
-*   **노드 간 접속**: 모든 노드가 `ssh_keys` 볼륨을 공유하므로, `control-plane`에서 `worker`로(또는 그 반대로) 비밀번호 없이 SSH 접속이 가능합니다. 이는 `StrictHostKeyChecking no` 설정으로 자동화되어 있습니다.
+## 🔑 접속 및 보안
+
+*   **노드 접속**: 기본적으로 `docker exec` 또는 `make control-plane`을 통해 접속하는 것을 권장합니다.
+*   **노드 간 SSH**: `ssh_keys` 볼륨을 통해 모든 노드가 동일한 SSH 키를 공유하며, `StrictHostKeyChecking no` 설정으로 인해 비밀번호 없이 서로 접속이 가능합니다.
+*   **외부 접속 (Kubectl)**: 호스트의 `volumes/kube/config` 파일을 호스트의 `~/.kube/config`로 복사하여 로컬에서 클러스터를 제어할 수 있습니다.
+
+---
 
 ## 📝 참고 사항
-*   이 설정은 개발 및 테스트 환경을 위한 것이며, 실제 운영 환경에서는 보다 엄격한 보안 설정이 필요할 수 있습니다.
-*   `kindest/node` 이미지의 특성상 `privileged: true` 옵션이 필요합니다.
+*   이 환경은 개발/테스트용이며, 컨테이너가 `privileged: true` 모드로 실행됩니다.
+*   Swap은 `init.sh` 실행 시 자동으로 비활성화(`swapoff -a`)됩니다.
