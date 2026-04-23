@@ -197,70 +197,8 @@ ls-net: ## Docker 네트워크 상세 정보 확인 (프로젝트별)
 	{ echo -e "NETWORK\tNAME\tIP_ADDRESS"; docker network inspect $$NET_NAME --format "{{range .Containers}}$$NET_NAME	{{.Name}}	{{.IPv4Address}}{{\"\n\"}}{{end}}"; } | column -t
 
 
-k8s-config:
-	docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		config
-
-k8s-build:
-	cp docker/services/kubernetes/modules/k8s_tools.sh docker/services/kasm/modules/k8s_tools.sh
-	docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		build control-plane
-
-	rm docker/services/kasm/modules/k8s_tools.sh
-
-# Example: make k8s-down k8s-up CNI_NAME=cilium
-# Example: make k8s-down k8s-up CNI_NAME=calico
-k8s-up:
-	CNI_NAME=$(CNI_NAME) docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		up -d
-
-k8s-scale: ## 워커 노드 스케일링 (예: make k8s-scale N=3)
-	@N=$(N); [ -z "$$N" ] && N=1; \
-	docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		up -d --scale worker=$$N
-
-k8s-down:
-	docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		down
-
-k8s-kasm:
-	docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		exec -it kasm bash
-
-k8s-control-plane:
-	docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		exec -it control-plane bash
-
-k8s-worker: ## 워커 노드 접속 (예: make k8s-worker N=1)
-	@N=$(N); [ -z "$$N" ] && N=1; \
-	docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		exec -it --index=$$N worker bash
-
-k8s-status: ## K8s 클러스터 상태 확인 (Nodes, Pods)
-	@docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		exec -it control-plane kubectl get nodes -o wide
-	@echo "--------------------------------------------------------------------------------"
-	@docker compose \
-		--env-file docker/.env.kubernetes \
-		-f docker/compose.kubernetes.yml \
-		exec -it control-plane kubectl get pods -A
+# --- Kubernetes ---
+k8s-%: ## Kubernetes 관련 명령 실행 (up, down, status 등)
+	@$(MAKE) -C docker/services/kubernetes $*
 
 
