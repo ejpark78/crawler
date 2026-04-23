@@ -33,4 +33,4 @@ samples/
 docs/
 tests/
 
-docker/volumes/
+volumes/

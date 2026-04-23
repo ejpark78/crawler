@@ -1,9 +1,9 @@
-.venv
-volumes
+__pycache__
 .env
 .env.*
-__pycache__
 .pytest_cache
+.venv
 samples
+volumes
 
 docker/services/kasm/modules/k8s_tools.sh

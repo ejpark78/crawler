@@ -90,4 +90,8 @@ chmod -R 755 $PLAYWRIGHT_BROWSERS_PATH
 echo ">>> Installing Gemini CLI..."
 npm install -g @google/gemini-cli
 
+# --- Kimi Code ---
+echo ">>> Installing Kimi Code..."
+curl -LsSf https://code.kimi.com/install.sh | bash - || echo "Kimi Code installer failed, but continuing..."
+
 echo "AI Agents installation finished successfully!"
