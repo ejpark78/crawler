@@ -35,7 +35,7 @@ RUN chmod +x /modules/* && /modules/k8s_tools.sh
 WORKDIR /root
 
 COPY startup /startup
-RUN chmod +x /startup/*
+RUN chmod -R +x /startup
 
 # SSH 포트 노출
 EXPOSE 22

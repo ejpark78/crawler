@@ -4,14 +4,13 @@
 # 노드의 로컬 디렉토리를 사용하여 동적 볼륨 프로비저닝(Dynamic PVC)을 가능하게 합니다.
 #
 
-VERSION=${LOCALPATH_VERSION:-v0.0.31}
-KUBECONFIG=${KUBECONFIG:-/etc/kubernetes/admin.conf}
+echo "Installing Local Path Provisioner using Helm..."
+helm repo add local-path-provisioner https://rancher.github.io/local-path-provisioner
+helm repo update local-path-provisioner
 
-echo "Installing Local Path Provisioner $VERSION..."
-kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/$VERSION/deploy/local-path-storage.yaml
-
-# 기본 StorageClass로 설정
-echo "Setting local-path as default StorageClass..."
-kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+helm upgrade --install local-path-provisioner local-path-provisioner/local-path-provisioner \
+    --namespace local-path-storage \
+    --create-namespace \
+    --set storageClass.defaultClass=true
 
 echo "Local Path Provisioner installation completed."

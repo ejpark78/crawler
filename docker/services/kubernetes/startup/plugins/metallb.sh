@@ -4,17 +4,19 @@
 # 로컬 클러스터에서 외부 IP(LoadBalancer)를 사용할 수 있게 합니다.
 #
 
-VERSION=${METALLB_VERSION:-v0.14.9}
-KUBECONFIG=${KUBECONFIG:-/etc/kubernetes/admin.conf}
+echo "Installing MetalLB using Helm..."
+helm repo add metallb https://metallb.github.io/metallb
+helm repo update metallb
 
-echo "Installing MetalLB $VERSION..."
-kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/$VERSION/config/manifests/metallb-native.yaml
+helm upgrade --install metallb metallb/metallb \
+  --namespace metallb-system \
+  --create-namespace
 
 echo "Waiting for MetalLB controllers to be ready..."
 kubectl wait \
   --namespace metallb-system \
   --for=condition=ready pod \
-  --selector=app=metallb \
+  --selector=app.kubernetes.io/name=metallb \
   --timeout=180s
 
 # 기본 IP 풀 설정 (Docker 네트워크 대역에 맞게 조정 필요)
