@@ -19,8 +19,15 @@ kubectl wait \
   --selector=app.kubernetes.io/name=metallb \
   --timeout=180s
 
-# 기본 IP 풀 설정 (Docker 네트워크 대역에 맞게 조정 필요)
-# 현재 k8s_default 네트워크가 172.20.0.0/16을 사용하므로 해당 대역 끝부분을 할당
+# 현재 노드의 IP를 확인하여 MetalLB용 IP 대역을 동적으로 설정합니다.
+# eth0 인터페이스의 IP 대역(첫 3옥텟)을 사용하여 .200-.250 범위를 할당합니다.
+NODE_IP=$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+IP_BASE=$(echo $NODE_IP | cut -d. -f1-3)
+METALLB_RANGE="${IP_BASE}.200-${IP_BASE}.250"
+
+echo "Detected Node IP: $NODE_IP"
+echo "Configuring MetalLB IP Pool with range: $METALLB_RANGE"
+
 cat <<EOF | kubectl apply -f -
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -29,7 +36,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-  - 172.20.255.200-172.20.255.250
+  - ${METALLB_RANGE}
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
