@@ -7,6 +7,7 @@
 # [주요 변수 가이드]
 #   CNI_NAME - 사용할 CNI 플러그인 (flannel, calico, cilium / 기본: calico)
 #   WORKERS  - 생성할 워커 노드의 개수 (기본: 1)
+#   PLUGINS  - 설치할 플러그인 목록 (기본: cni.sh dashboard.sh 등 전체)
 #
 # [타겟 분류]
 #   1. Infra   : 컨테이너 실행/정지 및 이미지 빌드 (up, down, build, scale)
@@ -17,6 +18,14 @@
 # Variables
 WORKERS ?= 1
 CNI_NAME ?= calico
+
+PLUGINS += cni.sh
+PLUGINS += localpath.sh
+PLUGINS += metrics-server.sh
+PLUGINS += metallb.sh
+PLUGINS += cert-manager.sh
+PLUGINS += prometheus.sh
+PLUGINS += portainer.sh
 
 # Paths relative to this Makefile
 ENV_FILE = .env
@@ -69,4 +78,15 @@ join: ## 모든 워커 노드를 클러스터에 조인
 	@for i in $$(seq 1 $(WORKERS)); do \
 		echo ">>> Joining worker $$i..."; \
 		docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec --index=$$i worker bash /root/.kube/join.sh; \
+	done
+
+config:
+	mkdir -p ~/.kube
+	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec -it control-plane cat /root/.kube/config > ~/.kube/config
+
+plugin: ## 클러스터 플러그인 설치 (기본값: 전체, 선택: PLUGINS="cni.sh dashboard.sh")
+	@for plugin in $(PLUGINS); do \
+		echo "--------------------------------------------------------------------------------"; \
+		echo ">>> Installing plugin: $$plugin..."; \
+		docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec -it control-plane bash /startup/plugins/$$plugin; \
 	done
