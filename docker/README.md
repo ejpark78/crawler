@@ -9,14 +9,14 @@ docker/
 ├── services/            # [Build & Config] 서비스별 독립 설정 및 빌드 리소스
 │   ├── airflow/         # Airflow 스케줄러 및 웹서버 설정 (compose.yml 포함)
 │   ├── app/             # 크롤러 워커(Worker) 이미지 빌드 및 설정
-│   ├── kubernetes/      # Kubernetes(Kind 기반) 노드 구성 및 설정
+│   ├── kubernetes/      # Kubernetes(Kind 기반) 노드 구성 및 설정 (.env 포함)
 │   ├── mongo/           # MongoDB 및 관리 UI 설정
 │   ├── traefik/         # Traefik 리버스 프록시 및 라우팅 설정
 │   └── ...
 ├── compose.crawler.yml  # [Main] 크롤러 프로젝트 메인 진입점
 ├── compose.kubernetes.yml # [Main] Kubernetes 환경 테스트 진입점
 ├── .env                 # 기본 환경 변수 설정 파일
-└── .env.k8s             # K8s 환경 전용 환경 변수 설정 파일
+└── services/kubernetes/.env # K8s 환경 전용 환경 변수 설정 파일
 ```
 
 ---
@@ -49,7 +49,7 @@ docker compose -f docker/compose.crawler.yml --profile mongo-ui --profile pg-ui 
 
 ### Kubernetes 환경 실행
 ```bash
-docker compose --env-file docker/.env.k8s -f docker/compose.kubernetes.yml up -d
+docker compose --env-file docker/services/kubernetes/.env -f docker/compose.kubernetes.yml up -d
 ```
 
 ---

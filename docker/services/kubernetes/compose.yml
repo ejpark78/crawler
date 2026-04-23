@@ -38,7 +38,7 @@ services:
     image: local/kubernetes:v1.35.1
     privileged: true
     deploy:
-      replicas: 1
+      replicas: ${WORKERS:-1}
     environment:
       - DOCKER_TLS_CERTDIR=       
       - CNI_NAME=${CNI_NAME:-flannel}

@@ -5,18 +5,18 @@
 # It is located in docker/services/kubernetes/
 
 # Variables
-CNI_NAME ?= flannel
-N ?= 1
+CNI_NAME ?= calico
+WORKERS ?= 1
 
 # Paths relative to this Makefile
 COMPOSE_DIR = ../..
-ENV_FILE = $(COMPOSE_DIR)/.env.kubernetes
+ENV_FILE = .env
 COMPOSE_FILE = $(COMPOSE_DIR)/compose.kubernetes.yml
 
-.PHONY: help config build up scale down kasm control-plane worker status
+.PHONY: *
 
 help: ## 도움말 출력
-	@echo "Usage: make [target] [CNI_NAME=flannel|calico|cilium] [N=count]"
+	@echo "Usage: make [target] [CNI_NAME=flannel|calico|cilium] [WORKERS=count]"
 	@echo ""
 	@echo "Targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -32,8 +32,8 @@ build: ## 컨트롤 플레인 이미지 빌드
 up: ## 클러스터 실행 (예: make up CNI_NAME=calico)
 	CNI_NAME=$(CNI_NAME) docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) up -d
 
-scale: ## 워커 노드 스케일링 (예: make scale N=3)
-	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) up -d --scale worker=$(N)
+scale: ## 워커 노드 스케일링 (예: make scale WORKERS=3)
+	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) up -d --scale worker=$(WORKERS)
 
 down: ## 클러스터 정지
 	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) down
@@ -44,10 +44,19 @@ kasm: ## Kasm 컨테이너 접속
 control-plane: ## 컨트롤 플레인 노드 접속
 	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec -it control-plane bash
 
-worker: ## 워커 노드 접속 (예: make worker N=1)
-	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec -it --index=$(N) worker bash
+worker: ## 워커 노드 접속 (예: make worker WORKERS=1)
+	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec -it --index=$(WORKERS) worker bash
 
 status: ## 클러스터 상태 확인 (Nodes, Pods)
 	@docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec -it control-plane kubectl get nodes -o wide
 	@echo "--------------------------------------------------------------------------------"
 	@docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec -it control-plane kubectl get pods -A
+
+init:
+	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec -it control-plane /startup/init.sh
+
+join: ## 모든 워커 노드를 클러스터에 조인
+	@for i in $$(seq 1 $(WORKERS)); do \
+		echo ">>> Joining worker $$i..."; \
+		docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) exec --index=$$i worker bash /root/.kube/join.sh; \
+	done
