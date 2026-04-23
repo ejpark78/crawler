@@ -47,19 +47,6 @@ help: ## 도움말 출력
 	@echo "Targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# --- Ollama ---
-# ollama pull gemma4:31b-cloud
-# ollama run gemma4:31b-cloud
-
-login:
-	ollama login
-
-logout:
-	ollama signout
-
-claude:
-	ollama launch claude --model gemma4:31b-cloud -- --dangerously-skip-permissions
-
 # --- Infrastructure ---
 up: ## 컨테이너 실행 (PRJ=k8s 가능)
 	docker compose $(COMPOSE_FILE) up -d
@@ -140,67 +127,19 @@ backfill: ## Airflow Backfill 실행 (날짜 범위 반복)
 		current_date=$$(date -I -d "$$current_date - 1 day"); \
 	done
 
-# Example: make backfill START_DATE=2023-04-01 END_DATE=2026-04-10
-# Example: make backfill START_DATE=2026-03-01 END_DATE=2026-03-31
-backfill-rg:
-	docker compose $(COMPOSE_FILE) exec airflow airflow dags backfill \
-	  -s $(START_DATE) -e $(END_DATE) $(DAG_ID)
-
-# Example: make clear START_DATE=2026-04-01 END_DATE=2026-04-17
-clear:
-	docker compose $(COMPOSE_FILE) exec -T airflow airflow tasks clear -y \
-	  -s $(START_DATE) -e $(END_DATE) $(DAG_ID)
-
 reset-pw:
 	docker compose $(COMPOSE_FILE) exec airflow \
 		airflow users reset-password \
 			--username admin --password admin
 
-# --- Database ---
-mongo-bash: ## MongoDB 쉘 접속
-	docker compose $(COMPOSE_FILE) exec mongodb mongosh crawler_db
-
-pg-bash:
-	docker compose $(COMPOSE_FILE) exec postgres bash
-
-# /opt/airflow/dags/
-# /opt/airflow/logs/dag_id=geeknews/
-airflow-bash:
-	docker compose $(COMPOSE_FILE) exec airflow bash
-
-worker-bash:
-	docker compose $(COMPOSE_FILE) exec worker bash
-
 # DELETE FROM task_instance WHERE dag_id='geeknews';
 pgsql:
 	docker compose $(COMPOSE_FILE) exec postgres psql -U airflow -d airflow
-
-init-net:
-	docker network create -d bridge $(NET_NAME)
-	docker network ls
-
-ipconfig: ## 모든 Docker 네트워크 및 컨테이너 상세 정보 표시
-	@{ \
-	echo "NETWORK|SUBNET|CONTAINER|IP_ADDRESS"; \
-	for net in $$(docker network ls --format "{{.Name}}"); do \
-		subnet=$$(docker network inspect $$net --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}' | xargs); \
-		[ -z "$$subnet" ] && subnet="none"; \
-		docker network inspect $$net --format '{{range .Containers}}'$$net'|'$$subnet'|{{.Name}}|{{.IPv4Address}}{{"\n"}}{{end}}' | grep . || \
-		echo "$$net|$$subnet|-|-"; \
-	done; \
-	} | column -t -s '|'
-
-
-
-ls-net: ## Docker 네트워크 상세 정보 확인 (프로젝트별)
-	@PROJECT_NAME=$$(docker compose $(COMPOSE_FILE) config | grep '^name:' | awk '{print $$2}'); \
-	NET_NAME=$$(docker network ls --filter "label=com.docker.compose.project=$$PROJECT_NAME" --format "{{.Name}}" | head -n 1); \
-	if [ -z "$$NET_NAME" ]; then echo "No network found for project $$PROJECT_NAME"; exit 1; fi; \
-	{ echo -e "NETWORK\tNAME\tIP_ADDRESS"; docker network inspect $$NET_NAME --format "{{range .Containers}}$$NET_NAME	{{.Name}}	{{.IPv4Address}}{{\"\n\"}}{{end}}"; } | column -t
-
 
 # --- Kubernetes ---
 k8s-%: ## Kubernetes 관련 명령 실행 (up, down, status 등)
 	@$(MAKE) -C docker/services/kubernetes $*
 
-
+# --- Docker Common ---
+%: ## Docker Common 관련 명령 실행 (networks)
+	@$(MAKE) -C docker $*
