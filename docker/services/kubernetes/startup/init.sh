@@ -6,20 +6,24 @@
 #
 
 CNI_NAME=${CNI_NAME:-flannel}
+FLANNEL_SUBNET=${FLANNEL_SUBNET:-"10.244.0.0/16"}
+CALICO_SUBNET=${CALICO_SUBNET:-"192.168.0.0/16"}
+CILIUM_SUBNET=${CILIUM_SUBNET:-"10.0.0.0/16"}
+
 echo "# 0. CNI 설정 확인 (Name: $CNI_NAME)"
 
 case $CNI_NAME in
   flannel)
-    POD_SUBNET="10.244.0.0/16"
+    POD_SUBNET=${FLANNEL_SUBNET}
     ;;
   calico)
-    POD_SUBNET="10.1.0.0/16"
+    POD_SUBNET=${CALICO_SUBNET:-"192.168.0.0/16"}
     ;;
   cilium)
-    POD_SUBNET="10.217.0.0/16"
+    POD_SUBNET=${CILIUM_SUBNET:-"10.0.0.0/16"}
     ;;
   *)
-    POD_SUBNET="10.244.0.0/16"
+    POD_SUBNET=${FLANNEL_SUBNET:-"10.244.0.0/16"}
     ;;
 esac
 

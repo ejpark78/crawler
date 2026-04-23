@@ -70,7 +70,10 @@ restart: ## 재시작
 	$(MAKE) up
 
 build: ## 이미지 빌드
+	cp docker/services/kubernetes/modules/k8s_tools.sh docker/services/kasm/modules/k8s_tools.sh
+	
 	docker compose $(COMPOSE_FILE) build
+	rm docker/services/kasm/modules/k8s_tools.sh
 
 logs: ## 로그 확인
 	docker compose $(COMPOSE_FILE) logs -f
@@ -201,13 +204,18 @@ k8s-config:
 		config
 
 k8s-build:
+	cp docker/services/kubernetes/modules/k8s_tools.sh docker/services/kasm/modules/k8s_tools.sh
 	docker compose \
 		--env-file docker/.env.kubernetes \
 		-f docker/compose.kubernetes.yml \
 		build control-plane
 
+	rm docker/services/kasm/modules/k8s_tools.sh
+
+# Example: make k8s-down k8s-up CNI_NAME=cilium
+# Example: make k8s-down k8s-up CNI_NAME=calico
 k8s-up:
-	docker compose \
+	CNI_NAME=$(CNI_NAME) docker compose \
 		--env-file docker/.env.kubernetes \
 		-f docker/compose.kubernetes.yml \
 		up -d

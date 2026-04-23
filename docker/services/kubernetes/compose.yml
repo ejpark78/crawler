@@ -11,6 +11,7 @@ services:
     hostname: control-plane
     environment:
       - DOCKER_TLS_CERTDIR= # DinD 사용 시 인증서 충돌 방지
+      - CNI_NAME=${CNI_NAME:-flannel}
     volumes:
       - kube:/root/.kube:rw
       - ssh_keys:/root/.ssh:rw
@@ -40,6 +41,7 @@ services:
       replicas: 1
     environment:
       - DOCKER_TLS_CERTDIR=       
+      - CNI_NAME=${CNI_NAME:-flannel}
     volumes:
       - kube:/root/.kube:rw
       - ssh_keys:/root/.ssh:rw

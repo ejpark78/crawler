@@ -2,7 +2,7 @@
 services:
   worker:
     build:
-      context: ../..
-      dockerfile: docker/services/wsl/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     image: local/wsl:latest
     restart: no

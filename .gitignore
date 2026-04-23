@@ -5,3 +5,5 @@ volumes
 __pycache__
 .pytest_cache
 samples
+
+docker/services/kasm/modules/k8s_tools.sh

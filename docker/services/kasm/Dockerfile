@@ -60,10 +60,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # 3. 선택적 모듈 설치 (모듈화된 스크립트 실행)
 COPY modules/ /modules/
+
+# 이동된 k8s_tools.sh를 공유 디렉토리에서 가져옵니다.
 RUN chmod +x /modules/*.sh && /modules/install.sh
 
 # 5. 시작 스크립트 설정
-COPY startup/ /dockerstartup/custom_startup/
+COPY startup /dockerstartup/custom_startup
 RUN chmod +x /dockerstartup/custom_startup/*.sh \
     && mv /dockerstartup/custom_startup/custom_startup.sh /dockerstartup/custom_startup.sh \
     && chown -R kasm-user:kasm-user /home/kasm-user

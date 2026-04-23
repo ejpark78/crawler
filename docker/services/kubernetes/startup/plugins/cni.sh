@@ -10,20 +10,6 @@ KUBECONFIG=${KUBECONFIG:-/etc/kubernetes/admin.conf}
 echo "CNI_NAME: $CNI_NAME"
 echo "KUBECONFIG: $KUBECONFIG"
 
-# 0. 표준 CNI 플러그인(bridge, portmap 등) 확인 및 설치
-# Flannel 등 대다수 CNI는 bridge 플러그인이 미리 존재해야 정상 작동합니다.
-if [ ! -f /opt/cni/bin/bridge ]; then
-    echo "표준 CNI 플러그인이 누락되었습니다. 설치를 시작합니다..."
-    CNI_PLUGINS_VERSION="v1.6.0"
-    ARCH="amd64"
-    [ "$(uname -m)" = "aarch64" ] && ARCH="arm64"
-    
-    mkdir -p /opt/cni/bin
-    curl -L https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/cni-plugins-linux-${ARCH}-${CNI_PLUGINS_VERSION}.tgz | tar -xz -C /opt/cni/bin
-    echo "표준 CNI 플러그인 설치 완료."
-fi
-
-
 case $CNI_NAME in
   cilium)
     echo "Installing Cilium using Cilium CLI..."
@@ -57,16 +43,23 @@ case $CNI_NAME in
     ;;
 
   calico)
-    echo "Installing Calico using calicoctl..."
+    echo "Installing Calico using operator..."
     
-    # Calico Operator 및 Custom Resources 설치
-    # (참고: Calico는 CLI 자체에 'install' 명령이 내장되어 있지 않으므로 매니페스트를 적용합니다)
+    # 1. Calico Operator 설치
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/tigera-operator.yaml
-    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/custom-resources.yaml
     
-    # 설치 상태 확인 (calicoctl 사용)
-    echo "Calico 상태를 확인합니다..."
-    calicoctl node status || true
+    # 2. Custom Resources 설정 (Subnet 맞춤)
+    # .env.kubernetes 또는 init.sh에서 설정한 값을 사용합니다.
+    CALICO_SUBNET=${CALICO_SUBNET:-"192.168.0.0/16"}
+    echo "Configuring Calico IP Pool with subnet: $CALICO_SUBNET"
+    
+    curl -L https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/custom-resources.yaml -o /tmp/calico-custom-resources.yaml
+    sed -i "s|cidr: 192.168.0.0/16|cidr: ${CALICO_SUBNET}|g" /tmp/calico-custom-resources.yaml
+    
+    kubectl create -f /tmp/calico-custom-resources.yaml
+    
+    echo "Waiting for Tigera Operator to be ready..."
+    kubectl rollout status deployment/tigera-operator -n tigera-operator --timeout=60s
     ;;
 
   *)
