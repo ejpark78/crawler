@@ -32,8 +32,15 @@ case $CNI_NAME in
     ;;
 
   flannel)
-    echo "Installing Flannel..."
-    kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    echo "Installing Flannel using Helm..."
+    helm repo add flannel https://flannel-io.github.io/flannel/
+    helm repo update flannel
+    
+    FLANNEL_SUBNET=${FLANNEL_SUBNET:-"10.244.0.0/16"}
+    helm upgrade --install flannel flannel/flannel \
+        --namespace kube-flannel \
+        --create-namespace \
+        --set podCidr="${FLANNEL_SUBNET}"
     
     echo "Waiting for Flannel pods to be ready..."
     kubectl rollout status ds/kube-flannel -n kube-flannel --timeout=120s
@@ -43,20 +50,18 @@ case $CNI_NAME in
     ;;
 
   calico)
-    echo "Installing Calico using operator..."
+    echo "Installing Calico using Helm..."
     
-    # 1. Calico Operator 설치
-    kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/tigera-operator.yaml
+    helm repo add projectcalico https://docs.tigera.io/calico/charts
+    helm repo update projectcalico
     
-    # 2. Custom Resources 설정 (Subnet 맞춤)
-    # .env.kubernetes 또는 init.sh에서 설정한 값을 사용합니다.
     CALICO_SUBNET=${CALICO_SUBNET:-"192.168.0.0/16"}
-    echo "Configuring Calico IP Pool with subnet: $CALICO_SUBNET"
-    
-    curl -L https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/custom-resources.yaml -o /tmp/calico-custom-resources.yaml
-    sed -i "s|cidr: 192.168.0.0/16|cidr: ${CALICO_SUBNET}|g" /tmp/calico-custom-resources.yaml
-    
-    kubectl create -f /tmp/calico-custom-resources.yaml
+    echo "Configuring Calico with subnet: $CALICO_SUBNET"
+
+    helm upgrade --install calico projectcalico/tigera-operator \
+        --namespace tigera-operator \
+        --create-namespace \
+        --set "installation.calicoNetwork.ipPools[0].cidr=${CALICO_SUBNET}"
     
     echo "Waiting for Tigera Operator to be ready..."
     kubectl rollout status deployment/tigera-operator -n tigera-operator --timeout=60s
