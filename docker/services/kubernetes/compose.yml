@@ -1,5 +1,10 @@
+# Kubernetes 클러스터 구성을 위한 Docker Compose 설정
+#
+# 이 파일은 Docker-in-Docker(DinD) 방식으로 Control Plane과 Worker 노드를 실행합니다.
+# 인클루드 지시어를 통해 메인 인프라와 통합되어 사용됩니다.
 
 services:
+  # --- Kubernetes Control Plane (Master Node) ---
   control-plane:
     build:
       context: .
@@ -7,28 +12,28 @@ services:
       args:
         - K8S_VERSION=v1.35.1
     image: local/kubernetes:v1.35.1
-    privileged: true
+    privileged: true # 컨테이너 내부에서 Docker 및 K8s 실행을 위해 필수
     hostname: control-plane
     environment:
       - DOCKER_TLS_CERTDIR= # DinD 사용 시 인증서 충돌 방지
-      - CNI_NAME=${CNI_NAME:-flannel}
+      - CNI_NAME=${CNI_NAME:-flannel} # 기본 CNI 설정
     volumes:
-      - kube:/root/.kube:rw
-      - ssh_keys:/root/.ssh:rw
-      - /lib/modules:/lib/modules:ro
-      - ./startup:/startup:ro
+      - kube:/root/.kube:rw        # Kubeconfig 및 Join 스크립트 공유
+      - ssh_keys:/root/.ssh:rw     # 노드 간 접속용 SSH 키 공유
+      - /lib/modules:/lib/modules:ro # 커널 모듈 로드 지원
+      - ./startup:/startup:ro      # 초기화 스크립트 마운트
     tmpfs:
       - /run
       - /run/lock
       - /tmp
     healthcheck:
-      # test: ["CMD", "kubectl", "cluster-info", "--kubeconfig=/etc/kubernetes/admin.conf"]
       test: ["CMD", "crictl", "info"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
 
+  # --- Kubernetes Worker Node ---
   worker:
     build:
       context: .
@@ -38,7 +43,7 @@ services:
     image: local/kubernetes:v1.35.1
     privileged: true
     deploy:
-      replicas: ${WORKERS:-1}
+      replicas: ${WORKERS:-1} # 환경 변수를 통한 워커 노드 개수 제어
     environment:
       - DOCKER_TLS_CERTDIR=       
       - CNI_NAME=${CNI_NAME:-flannel}
@@ -52,13 +57,14 @@ services:
       - /tmp
     depends_on:
       control-plane:
-        condition: service_healthy
+        condition: service_healthy # 마스터 노드 준비 완료 후 워커 기동
     healthcheck:
       test: ["CMD", "crictl", "info"]
       interval: 10s
       timeout: 5s
       retries: 3
 
+# --- 공통 데이터 볼륨 ---
 volumes:
-  kube:
-  ssh_keys:
+  kube:     # 클러스터 설정 및 조인 정보를 저장하여 노드 간 공유
+  ssh_keys: # 모든 노드가 동일한 SSH 키를 공유하도록 설정

@@ -1,16 +1,26 @@
 # ==============================================================================
 # Kubernetes Infrastructure Management (Docker-in-Docker Cluster)
 # ==============================================================================
-# This Makefile manages the Kubernetes cluster running via Docker Compose.
-# It is located in docker/services/kubernetes/
+# 이 파일은 Docker Compose 내에서 실행되는 Kubernetes 클러스터를 관리합니다.
+# 노드 빌드, 클러스터 초기화(init), 조인(join) 및 상태 확인 기능을 제공합니다.
+#
+# [주요 변수 가이드]
+#   CNI_NAME - 사용할 CNI 플러그인 (flannel, calico, cilium / 기본: calico)
+#   WORKERS  - 생성할 워커 노드의 개수 (기본: 1)
+#
+# [타겟 분류]
+#   1. Infra   : 컨테이너 실행/정지 및 이미지 빌드 (up, down, build, scale)
+#   2. Access  : 노드 쉘 접속 (control-plane, worker, kasm)
+#   3. Cluster : K8s 초기화 및 상태 점검 (init, join, status)
+# ==============================================================================
 
 # Variables
-CNI_NAME ?= calico
 WORKERS ?= 1
+CNI_NAME ?= calico
 
 # Paths relative to this Makefile
-COMPOSE_DIR = ../..
 ENV_FILE = .env
+COMPOSE_DIR = ../..
 COMPOSE_FILE = $(COMPOSE_DIR)/compose.kubernetes.yml
 
 .PHONY: *

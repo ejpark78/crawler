@@ -12,7 +12,7 @@ name: crawler
 
 include:
   - services/traefik/compose.yml
-  - services/kasm/compose.yml
   - services/mongo/compose.yml
   - services/airflow/compose.yml
   - services/app/compose.yml
+  # - services/kasm/compose.yml
