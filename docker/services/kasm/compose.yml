@@ -12,7 +12,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: crawler/kasm:latest
+    image: local/kasm:latest
     restart: unless-stopped
     shm_size: "1gb"
     privileged: false

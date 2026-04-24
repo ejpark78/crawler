@@ -8,6 +8,8 @@ SHELL := /bin/bash
 # ollama run gemma4:31b-cloud
 # ollama launch claude --model kimi-k2.6:cloud
 # ollama launch claude --model gemma4:31b-cloud -- --dangerously-skip-permissions
+# ollama launch claude --model gemma4:4b
+# ollama launch claude --model gemma4:e2b
 
 login:
 	ollama login
@@ -16,7 +18,8 @@ logout:
 	ollama signout
 
 claude:
-	ollama launch claude --model gemma4:31b-cloud -- --dangerously-skip-permissions
+# 	ollama launch claude --model gemma4:31b-cloud -- --dangerously-skip-permissions
+	ollama launch claude --model gemma4:e2b
 
 # --- Docker Network ---
 networks: ## 모든 Docker 네트워크 및 컨테이너 상세 정보 표시
