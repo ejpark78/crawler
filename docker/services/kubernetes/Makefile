@@ -32,6 +32,8 @@ ENV_FILE = .env
 COMPOSE_DIR = ../..
 COMPOSE_FILE = $(COMPOSE_DIR)/compose.kubernetes.yml
 
+APP = control-plane
+
 .PHONY: *
 
 help: ## 도움말 출력
@@ -45,7 +47,7 @@ config: ## Compose 설정 확인
 
 build: ## 컨트롤 플레인 이미지 빌드
 	cp modules/k8s_tools.sh ../kasm/modules/k8s_tools.sh
-	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) build control-plane
+	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE) build $(APP)
 	rm ../kasm/modules/k8s_tools.sh
 
 up: ## 클러스터 실행 (예: make up CNI_NAME=calico)
